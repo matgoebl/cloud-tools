@@ -62,10 +62,10 @@ def list(ctx):
 
 
 @kafka_client.command()
-@click.option('-t', '--topic',   help='Topic to send to.', required=True)
-@click.option('-k', '--key',     help='Key to use for sending.', default='TEST', show_default=True)
-@click.option('-h', '--headers', help='Header to set for every sent message, e.g. abc:123;xyz:987')
-@click.option('-p', '--payload', help='Payload to send.', default='abc123', show_default=True)
+@click.option('-t', '--topic',       help='Topic to send to.', required=True)
+@click.option('-k', '--key',         help='Key to use for sending.', default='TEST', show_default=True)
+@click.option('-h', '--headers',     help='Header to set for every sent message, e.g. abc:123;xyz:987')
+@click.option('-p', '--payload',     help='Payload to send.', default='abc123', show_default=True)
 @click.option('-H', '--headersfile', help='Read headers from file.', type=click.File('r'))
 @click.option('-P', '--payloadfile', help='Read payload from file.', type=click.File('rb'))
 @click.pass_context
@@ -85,8 +85,7 @@ def send(ctx, topic, key, headers, payload, headersfile, payloadfile):
             k, v = header.split(':')
             headerlist.append((k,v.encode('utf-8')))
 
-    producer_args = {
-    }
+    producer_args = {}
     producer = KafkaProducer(**ctx.obj['conn_args'], **producer_args)
     logging.debug(f"Sending message: {key}={payload} headers:{headerlist}")
     producer.send(topic, key=key.encode('utf-8'), headers=headerlist, value=payload)
@@ -95,11 +94,14 @@ def send(ctx, topic, key, headers, payload, headersfile, payloadfile):
 
 default_writefile = "msg%05i"
 @kafka_client.command()
-@click.option('-t', '--topic', help='Topic to receive from.', required=True)
-@click.option('-c', '--count', help='Number of messages to receive.', type=int, default=1)
-@click.option('-w', '--writefile', help='Write messages (.data), headers (.header) and key (.key) to files using the given pattern. "." is a shortcut for ' + default_writefile)
+@click.option('-t', '--topic',         help='Topic to receive from.', required=True)
+@click.option('-c', '--count',         help='Number of messages to receive.', type=int, default=1)
+@click.option('-w', '--writefile',     help='Write messages (.data), headers (.header) and key (.key) to files using the given pattern. "." is a shortcut for ' + default_writefile)
+@click.option('-k', '--key',           help='Filter for messages with the given key.')
+@click.option('-s', '--searchpayload', help='Filter for message whose payload matches the given regex.')
+@click.option('-S', '--searchheader',  help='Filter for message whose headers match the given regex.')
 @click.pass_context
-def recv(ctx, topic, count, writefile):
+def recv(ctx, topic, count, writefile, key, searchpayload, searchheader):
     """Receive messages."""
     consumer_args = {
         'group_id': None,
@@ -122,10 +124,20 @@ def recv(ctx, topic, count, writefile):
         for topic, msgs in topic_msgs.items():
             for msg in msgs:
                 if n < count:
+                    n = n + 1
                     logging.debug(f"Received message: {msg}")
+                    headers = ""
+                    if writefile or searchheader:
+                        for header in msg.headers:
+                            headers += f"{header[0]}:{header[1].decode('utf-8')}\n"
+                    if key and msg.key.decode('utf-8') != key:
+                        continue
+                    if searchpayload and not re.search(searchpayload, msg.value.decode('utf-8'), flags=re.IGNORECASE):
+                        continue
+                    if searchheader and not re.search(searchheader, headers, flags=re.IGNORECASE):
+                        continue
                     dt = datetime.datetime.fromtimestamp(msg.timestamp//1000).replace(microsecond=msg.timestamp % 1000*1000).astimezone().isoformat()
                     print("%s %s(%d)%d: %s=%s" % (dt, topic.topic, topic.partition, msg.offset, msg.key, msg.value))
-                    n = n + 1
                     if writefile:
                         basefilename = writefile % n
                         logging.debug(f"Writing to {basefilename}.data and {basefilename}.header")
@@ -134,8 +146,7 @@ def recv(ctx, topic, count, writefile):
                         with open(basefilename + '.key', 'wb') as f:
                             f.write(msg.key)
                         with open(basefilename + '.header', 'w') as f:
-                            for header in msg.headers:
-                                f.write(f"{header[0]}:{header[1].decode('utf-8')}\n")
+                            f.write(headers)
 
 
 if __name__ == '__main__':
