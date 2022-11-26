@@ -83,11 +83,13 @@ def send(ctx, topic, key, headers, payload):
     producer.flush()
 
 
+default_writefile = "msg%05i"
 @kafka_client.command()
 @click.option('-t', '--topic', help='Topic to receive from.', required=True)
 @click.option('-c', '--count', help='Number of messages to receive.', type=int, default=1)
+@click.option('-w', '--writefile', help='Write messages (.data) and headers (.header) to files using given pattern. "." is shortcut for ' + default_writefile)
 @click.pass_context
-def recv(ctx, topic, count):
+def recv(ctx, topic, count, writefile):
     """Receive messages."""
     consumer_args = {
         'group_id': None,
@@ -101,15 +103,27 @@ def recv(ctx, topic, count):
     offset_end = consumer.position(topicpartition)
     consumer.seek(topicpartition, offset_end - count)
 
-    while count > 0:
+    if writefile == '.':
+        writefile = default_writefile
+
+    n = 0
+    while n < count:
         topic_msgs = consumer.poll(timeout_ms=1000)
         for topic, msgs in topic_msgs.items():
             for msg in msgs:
-                if count > 0:
+                if n < count:
+                    logging.debug(f"Received message: {msg}")
                     dt = datetime.datetime.fromtimestamp(msg.timestamp//1000).replace(microsecond=msg.timestamp % 1000*1000).astimezone().isoformat()
                     print("%s %s(%d)%d: %s=%s" % (dt, topic.topic, topic.partition, msg.offset, msg.key, msg.value))
-                    print(msg)
-                    count = count - 1
+                    n = n + 1
+                    if writefile:
+                        basefilename = writefile % n
+                        logging.debug(f"Writing to {basefilename}.data and {basefilename}.header")
+                        with open(basefilename + '.data', 'wb') as f:
+                            f.write(msg.value)
+                        with open(basefilename + '.header', 'w') as f:
+                            for header in msg.headers:
+                                f.write(f"{header[0]}:{header[1].decode('utf-8')}\n")
 
 
 if __name__ == '__main__':
