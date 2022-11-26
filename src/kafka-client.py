@@ -97,7 +97,7 @@ default_writefile = "msg%05i"
 @kafka_client.command()
 @click.option('-t', '--topic', help='Topic to receive from.', required=True)
 @click.option('-c', '--count', help='Number of messages to receive.', type=int, default=1)
-@click.option('-w', '--writefile', help='Write messages (.data) and headers (.header) to files using given pattern. "." is shortcut for ' + default_writefile)
+@click.option('-w', '--writefile', help='Write messages (.data), headers (.header) and key (.key) to files using the given pattern. "." is a shortcut for ' + default_writefile)
 @click.pass_context
 def recv(ctx, topic, count, writefile):
     """Receive messages."""
@@ -131,6 +131,8 @@ def recv(ctx, topic, count, writefile):
                         logging.debug(f"Writing to {basefilename}.data and {basefilename}.header")
                         with open(basefilename + '.data', 'wb') as f:
                             f.write(msg.value)
+                        with open(basefilename + '.key', 'wb') as f:
+                            f.write(msg.key)
                         with open(basefilename + '.header', 'w') as f:
                             for header in msg.headers:
                                 f.write(f"{header[0]}:{header[1].decode('utf-8')}\n")
