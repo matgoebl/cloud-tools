@@ -66,20 +66,30 @@ def list(ctx):
 @click.option('-k', '--key',     help='Key to use for sending.', default='TEST', show_default=True)
 @click.option('-h', '--headers', help='Header to set for every sent message, e.g. abc:123;xyz:987')
 @click.option('-p', '--payload', help='Payload to send.', default='abc123', show_default=True)
+@click.option('-H', '--headersfile', help='Read headers from file.', type=click.File('r'))
+@click.option('-P', '--payloadfile', help='Read payload from file.', type=click.File('rb'))
 @click.pass_context
-def send(ctx, topic, key, headers, payload):
+def send(ctx, topic, key, headers, payload, headersfile, payloadfile):
     """Send message."""
-    producer_args = {
-    }
-    producer = KafkaProducer(**ctx.obj['conn_args'], **producer_args)
+    if payloadfile:
+        payload = payloadfile.read()
+    else:
+        payload = payload.encode('utf-8')
+    if headersfile:
+        headers = headersfile.read().rstrip('\n')
+
     headerlist = None
     if headers:
         headerlist = []
         for header in re.split(r'[;\n]', headers):
-            key, val = header.split(':')
-            headerlist.append((key,val.encode('utf-8')))
-    print(headerlist)
-    producer.send(topic, key=key.encode('utf-8'), headers=headerlist, value=payload.encode('utf-8'))
+            k, v = header.split(':')
+            headerlist.append((k,v.encode('utf-8')))
+
+    producer_args = {
+    }
+    producer = KafkaProducer(**ctx.obj['conn_args'], **producer_args)
+    logging.debug(f"Sending message: {key}={payload} headers:{headerlist}")
+    producer.send(topic, key=key.encode('utf-8'), headers=headerlist, value=payload)
     producer.flush()
 
 
