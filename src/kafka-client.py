@@ -3,6 +3,7 @@ from kafka import KafkaConsumer, TopicPartition, KafkaProducer
 import click
 import os
 import sys
+import re
 import datetime
 import logging
 import ssl
@@ -63,14 +64,22 @@ def list(ctx):
 @kafka_client.command()
 @click.option('-t', '--topic',   help='Topic to send to.', required=True)
 @click.option('-k', '--key',     help='Key to use for sending.', default='TEST', show_default=True)
+@click.option('-h', '--headers', help='Header to set for every sent message, e.g. abc:123;xyz:987')
 @click.option('-p', '--payload', help='Payload to send.', default='abc123', show_default=True)
 @click.pass_context
-def send(ctx, topic, key, payload):
+def send(ctx, topic, key, headers, payload):
     """Send message."""
     producer_args = {
     }
     producer = KafkaProducer(**ctx.obj['conn_args'], **producer_args)
-    producer.send(topic, key=key.encode('utf-8'), value= payload.encode('utf-8'))
+    headerlist = None
+    if headers:
+        headerlist = []
+        for header in re.split(r'[;\n]', headers):
+            key, val = header.split(':')
+            headerlist.append((key,val.encode('utf-8')))
+    print(headerlist)
+    producer.send(topic, key=key.encode('utf-8'), headers=headerlist, value=payload.encode('utf-8'))
     producer.flush()
 
 
@@ -88,7 +97,9 @@ def recv(ctx, topic, count):
     consumer = KafkaConsumer(**ctx.obj['conn_args'], **consumer_args)
     topicpartition = TopicPartition(topic, 0)
     consumer.assign([topicpartition])
-    consumer.seek_to_beginning()
+    consumer.seek_to_end((topicpartition))
+    offset_end = consumer.position(topicpartition)
+    consumer.seek(topicpartition, offset_end - count)
 
     while count > 0:
         topic_msgs = consumer.poll(timeout_ms=1000)
