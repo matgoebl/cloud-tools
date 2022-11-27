@@ -126,18 +126,18 @@ def recv(ctx, topic, count, writefile, key, searchpayload, searchheader):
                 if n < count:
                     n = n + 1
                     logging.debug(f"Received message: {msg}")
-                    headers = ""
-                    if writefile or searchheader:
-                        for header in msg.headers:
-                            headers += f"{header[0]}:{header[1].decode('utf-8')}\n"
                     if key and msg.key.decode('utf-8') != key:
                         continue
                     if searchpayload and not re.search(searchpayload, msg.value.decode('utf-8'), flags=re.IGNORECASE):
                         continue
-                    if searchheader and not re.search(searchheader, headers, flags=re.IGNORECASE):
+                    headers = ""
+                    for header in msg.headers:
+                        headers += f"{header[0]}:{header[1].decode('utf-8')}\n"
+                    headers_oneline = headers.replace('\n',';')
+                    if searchheader and not re.search(searchheader, headers_oneline, flags=re.IGNORECASE):
                         continue
                     dt = datetime.datetime.fromtimestamp(msg.timestamp//1000).replace(microsecond=msg.timestamp % 1000*1000).astimezone().isoformat()
-                    print("%s %s(%d)%d: %s=%s" % (dt, topic.topic, topic.partition, msg.offset, msg.key, msg.value))
+                    print("%s %s(%d)%d [%s] %s:%s" % (dt, topic.topic, topic.partition, msg.offset, headers_oneline, msg.key, msg.value))
                     if writefile:
                         basefilename = writefile % n
                         logging.debug(f"Writing to {basefilename}.data and {basefilename}.header")
