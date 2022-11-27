@@ -7,6 +7,7 @@ import re
 import datetime
 import logging
 import ssl
+import math
 
 @click.group()
 @click.option('-b', '--bootstrap', help='Kafka bootstrap server.', default='localhost:9093', show_default=True)
@@ -95,7 +96,7 @@ def send(ctx, topic, key, headers, payload, headersfile, payloadfile):
 default_writefile = "msg%05i"
 @kafka_client.command()
 @click.option('-t', '--topic',         help='Topic to receive from.', required=True)
-@click.option('-c', '--count',         help='Number of messages to receive.', type=int, default=1, show_default=True)
+@click.option('-c', '--count',         help='Number of messages to receive (will be rounded to multiple of partitions).', type=int, default=1, show_default=True)
 @click.option('-f', '--follow',        help='Wait for new messages.', is_flag=True)
 @click.option('-j', '--jump',          help='Jump to given date and time.')
 @click.option('-w', '--writefile',     help='Write messages (.data), headers (.header) and key (.key) to files using the given pattern. "." is a shortcut for ' + default_writefile)
@@ -113,21 +114,27 @@ def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchh
     consumer = KafkaConsumer(**ctx.obj['conn_args'], **consumer_args)
     topicpartitions = [TopicPartition(topic, partition) for partition in consumer.partitions_for_topic(topic)]
     consumer.assign(topicpartitions)
-
-    partition = 0  # TODO: handle more than one partition
-    topicpartition = topicpartitions[0] #TopicPartition(topic=topic, partition=partition)
     offsets = consumer.end_offsets(topicpartitions)
-    end_offset = offsets.get(topicpartition)
     if jump:
         ts = int( datetime.datetime.fromisoformat(jump).timestamp() * 1000 )
-        seek_offset = consumer.offsets_for_times({topicpartition: ts})[topicpartition].offset
-    else:
-        seek_offset = end_offset - count
-        if seek_offset < 0:
-            seek_offset = 0
-    if end_offset - seek_offset < count:
-        count = end_offset - seek_offset
-    consumer.seek(topicpartition, seek_offset)
+
+    num_partitions = len(topicpartitions)
+    count_per_partition = math.ceil(count / num_partitions)
+    count = count_per_partition * num_partitions
+    count_max = 0
+    for topicpartition in topicpartitions:
+        end_offset = offsets.get(topicpartition)
+        if jump:
+            seek_offset = consumer.offsets_for_times({topicpartition: ts})[topicpartition].offset
+        else:
+            seek_offset = end_offset - count_per_partition
+            if seek_offset < 0:
+                seek_offset = 0
+        count_max += end_offset - seek_offset
+        consumer.seek(topicpartition, seek_offset)
+    if count_max < count:
+        count = count_max
+
 
     if writefile == '.':
         writefile = default_writefile
