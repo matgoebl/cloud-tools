@@ -55,6 +55,10 @@ avro-demo:
 	pipenv run avro-tool.py -s demo.avsc dec -i tmp_demo_schemaless.avro
 
 
+cloud-tools-deploy:
+	./cloud-tools-deploy.sh
+
+
 clean:
 	rm -f tmp*
 
