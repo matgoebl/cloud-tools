@@ -95,13 +95,14 @@ def send(ctx, topic, key, headers, payload, headersfile, payloadfile):
 default_writefile = "msg%05i"
 @kafka_client.command()
 @click.option('-t', '--topic',         help='Topic to receive from.', required=True)
-@click.option('-c', '--count',         help='Number of messages to receive.', type=int, default=1)
+@click.option('-c', '--count',         help='Number of messages to receive.', type=int, default=1, show_default=True)
+@click.option('-f', '--follow',        help='Wait for new messages.', is_flag=True)
 @click.option('-w', '--writefile',     help='Write messages (.data), headers (.header) and key (.key) to files using the given pattern. "." is a shortcut for ' + default_writefile)
 @click.option('-k', '--key',           help='Filter for messages with the given key.')
 @click.option('-s', '--searchpayload', help='Filter for message whose payload matches the given regex.')
 @click.option('-S', '--searchheader',  help='Filter for message whose headers match the given regex.')
 @click.pass_context
-def recv(ctx, topic, count, writefile, key, searchpayload, searchheader):
+def recv(ctx, topic, count, follow, writefile, key, searchpayload, searchheader):
     """Receive messages."""
     consumer_args = {
         'group_id': None,
@@ -113,17 +114,21 @@ def recv(ctx, topic, count, writefile, key, searchpayload, searchheader):
     consumer.assign([topicpartition])
     consumer.seek_to_end((topicpartition))
     offset_end = consumer.position(topicpartition)
-    consumer.seek(topicpartition, offset_end - count)
+    seek_offset = offset_end - count
+    if seek_offset < 0:
+        count += seek_offset
+        seek_offset = 0
+    consumer.seek(topicpartition, seek_offset)
 
     if writefile == '.':
         writefile = default_writefile
 
     n = 0
-    while n < count:
+    while n < count or follow:
         topic_msgs = consumer.poll(timeout_ms=1000)
         for topic, msgs in topic_msgs.items():
             for msg in msgs:
-                if n < count:
+                if n < count or follow:
                     n = n + 1
                     logging.debug(f"Received message: {msg}")
                     if key and msg.key.decode('utf-8') != key:
