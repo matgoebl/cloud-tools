@@ -43,4 +43,15 @@ recv:
 sh:
 	pipenv shell
 
-.PHONY: all install destroy forward list send recv
+
+AVRO_TOOLS=java -jar ../.venv/avro-tools-1.11.1.jar
+avro-demo:
+	$(AVRO_TOOLS) idl2schemata ./demo.avdl ./
+	$(AVRO_TOOLS) fromjson --schema-file demo.avsc demo.json > tmp_demo.avro
+	$(AVRO_TOOLS) tojson tmp_demo.avro
+
+
+clean:
+	rm -f tmp*
+
+.PHONY: all install destroy forward list send recv avro-demo clean

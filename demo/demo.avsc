@@ -1,0 +1,28 @@
+{
+  "type" : "record",
+  "name" : "demo",
+  "namespace" : "com.example.demo",
+  "fields" : [ {
+    "name" : "hello",
+    "type" : "string"
+  }, {
+    "name" : "count",
+    "type" : "int"
+  }, {
+    "name" : "choice",
+    "type" : {
+      "type" : "enum",
+      "name" : "tmp_enum",
+      "symbols" : [ "A", "B", "C" ]
+    }
+  }, {
+    "name" : "option",
+    "type" : [ "null", "string" ]
+  }, {
+    "name" : "numbers",
+    "type" : {
+      "type" : "array",
+      "items" : "int"
+    }
+  } ]
+}

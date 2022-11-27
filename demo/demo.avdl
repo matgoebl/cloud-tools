@@ -1,0 +1,15 @@
+@namespace("com.example.demo")
+protocol Demo {
+ enum tmp_enum {
+  A,
+  B,
+  C
+ }
+ record demo {
+  string hello;
+  int count;
+  tmp_enum choice;
+  union { null, string } option;
+  array <int> numbers;
+ }
+}

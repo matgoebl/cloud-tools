@@ -1,0 +1,7 @@
+{
+ "hello": "World!",
+ "count": 5,
+ "choice": "A",
+ "option": null,
+ "numbers": [1, 2, 3]
+}

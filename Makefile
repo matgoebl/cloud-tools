@@ -8,6 +8,7 @@ all:
 $(VENV):
 	python3 -m pip install --user virtualenv pipenv
 	pipenv install
+	cd .venv/ && wget --continue https://repo1.maven.org/maven2/org/apache/avro/avro-tools/1.11.1/avro-tools-1.11.1.jar
 
 sh: $(VENV)
 	pipenv shell
