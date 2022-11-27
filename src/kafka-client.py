@@ -97,12 +97,13 @@ default_writefile = "msg%05i"
 @click.option('-t', '--topic',         help='Topic to receive from.', required=True)
 @click.option('-c', '--count',         help='Number of messages to receive.', type=int, default=1, show_default=True)
 @click.option('-f', '--follow',        help='Wait for new messages.', is_flag=True)
+@click.option('-j', '--jump',          help='Jump to given date and time.')
 @click.option('-w', '--writefile',     help='Write messages (.data), headers (.header) and key (.key) to files using the given pattern. "." is a shortcut for ' + default_writefile)
 @click.option('-k', '--key',           help='Filter for messages with the given key.')
 @click.option('-s', '--searchpayload', help='Filter for message whose payload matches the given regex.')
 @click.option('-S', '--searchheader',  help='Filter for message whose headers match the given regex.')
 @click.pass_context
-def recv(ctx, topic, count, follow, writefile, key, searchpayload, searchheader):
+def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchheader):
     """Receive messages."""
     consumer_args = {
         'group_id': None,
@@ -110,14 +111,22 @@ def recv(ctx, topic, count, follow, writefile, key, searchpayload, searchheader)
         'auto_offset_reset': 'earliest',
     }
     consumer = KafkaConsumer(**ctx.obj['conn_args'], **consumer_args)
-    topicpartition = TopicPartition(topic, 0)
-    consumer.assign([topicpartition])
-    consumer.seek_to_end((topicpartition))
-    offset_end = consumer.position(topicpartition)
-    seek_offset = offset_end - count
-    if seek_offset < 0:
-        count += seek_offset
-        seek_offset = 0
+    topicpartitions = [TopicPartition(topic, partition) for partition in consumer.partitions_for_topic(topic)]
+    consumer.assign(topicpartitions)
+
+    partition = 0  # TODO: handle more than one partition
+    topicpartition = topicpartitions[0] #TopicPartition(topic=topic, partition=partition)
+    offsets = consumer.end_offsets(topicpartitions)
+    end_offset = offsets.get(topicpartition)
+    if jump:
+        ts = int( datetime.datetime.fromisoformat(jump).timestamp() * 1000 )
+        seek_offset = consumer.offsets_for_times({topicpartition: ts})[topicpartition].offset
+    else:
+        seek_offset = end_offset - count
+        if seek_offset < 0:
+            seek_offset = 0
+    if end_offset - seek_offset < count:
+        count = end_offset - seek_offset
     consumer.seek(topicpartition, seek_offset)
 
     if writefile == '.':
