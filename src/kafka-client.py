@@ -44,7 +44,12 @@ def kafka_client(ctx, bootstrap, username, password, insecure, dnsmap, verbose):
             'sasl_plain_password': password,
         }
 
-    ctx.obj['conn_args'] = conn_args
+    ctx.obj['producer_args'] = conn_args
+    ctx.obj['consumer_args'] = conn_args | {
+        'group_id': None,
+        'enable_auto_commit': False,
+        'auto_offset_reset': 'earliest',
+    }
 
     if dnsmap:
         import dnsremap
@@ -55,7 +60,7 @@ def kafka_client(ctx, bootstrap, username, password, insecure, dnsmap, verbose):
 @click.pass_context
 def list(ctx):
     """List topics."""
-    consumer = KafkaConsumer(**ctx.obj['conn_args'])
+    consumer = KafkaConsumer(**ctx.obj['consumer_args'])
     topics = [topic for topic in consumer.topics()]
     topics.sort()
     for topic in topics:
@@ -86,8 +91,7 @@ def send(ctx, topic, key, headers, payload, headersfile, payloadfile):
             k, v = header.split(':')
             headerlist.append((k,v.encode('utf-8')))
 
-    producer_args = {}
-    producer = KafkaProducer(**ctx.obj['conn_args'], **producer_args)
+    producer = KafkaProducer(**ctx.obj['producer_args'])
     logging.debug(f"Sending message: {key}={payload} headers:{headerlist}")
     producer.send(topic, key=key.encode('utf-8'), headers=headerlist, value=payload)
     producer.flush()
@@ -106,12 +110,7 @@ default_writefile = "msg%05i"
 @click.pass_context
 def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchheader):
     """Receive messages."""
-    consumer_args = {
-        'group_id': None,
-        'enable_auto_commit': False,
-        'auto_offset_reset': 'earliest',
-    }
-    consumer = KafkaConsumer(**ctx.obj['conn_args'], **consumer_args)
+    consumer = KafkaConsumer(**ctx.obj['consumer_args'])
     topicpartitions = [TopicPartition(topic, partition) for partition in consumer.partitions_for_topic(topic)]
     consumer.assign(topicpartitions)
     offsets = consumer.end_offsets(topicpartitions)
