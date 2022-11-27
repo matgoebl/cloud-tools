@@ -1,6 +1,6 @@
 export NAMESPACE=kafka-test
 
-all:
+all: install forward list send recv forward-kill
 
 install:
 	@echo -n "Installing on Cluster: "
@@ -13,5 +13,34 @@ install:
 destroy:
 	-kubectl delete namespace $(NAMESPACE)
 
-.PHONY: all install destroy
-	
+
+export NAMESPACE=kafka-test
+export KAFKA_SERVICE=my-cluster-kafka-brokers
+export KAFKA_CLIENT_DNSMAP=my-cluster-kafka-0.$(KAFKA_SERVICE).$(NAMESPACE).svc:9093=localhost:9093
+export KAFKA_CLIENT_INSECURE=true
+export KAFKA_CLIENT_USERNAME=demo-user
+export KAFKA_CLIENT_PASSWORD=$(shell kubectl --namespace $(NAMESPACE) get secret/$(KAFKA_CLIENT_USERNAME) -o json | jq .data.password -r | base64 -d)
+export ENV PIPENV_VENV_IN_PROJECT=1
+export PATH:=$(PATH):$(PWD)/../src/
+
+forward:
+	@echo "Forward bootstrap server and broker ports..."
+	kubectl port-forward --namespace $(NAMESPACE) services/$(KAFKA_SERVICE) 9093:9093  & 
+	kubectl port-forward --namespace $(NAMESPACE) services/$(KAFKA_SERVICE) 19093:9093 &
+
+forward-kill:
+	pkill -e -f "^kubectl port-forward --namespace $(NAMESPACE)"
+
+list:
+	pipenv run ../src/kafka-client.py list
+
+send:
+	pipenv run ../src/kafka-client.py send -t demo-topic -k TEST-KEY -h 'abc:123;xyz:987' -p 'Hello World!'
+
+recv:
+	pipenv run ../src/kafka-client.py recv -t demo-topic -c 3
+
+sh:
+	pipenv shell
+
+.PHONY: all install destroy forward list send recv
