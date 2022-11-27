@@ -32,13 +32,13 @@ forward-kill:
 	pkill -e -f "^kubectl port-forward --namespace $(NAMESPACE)"
 
 list:
-	pipenv run ../src/kafka-client.py list
+	pipenv run kafka-client.py list
 
 send:
-	pipenv run ../src/kafka-client.py send -t demo-topic -k TEST-KEY -h 'abc:123;xyz:987' -p 'Hello World!'
+	pipenv run kafka-client.py send -t demo-topic -k TEST-KEY -h 'abc:123;xyz:987' -p 'Hello World!'
 
 recv:
-	pipenv run ../src/kafka-client.py recv -t demo-topic -c 3
+	pipenv run kafka-client.py recv -t demo-topic -c 3
 
 sh:
 	pipenv shell
@@ -49,6 +49,10 @@ avro-demo:
 	$(AVRO_TOOLS) idl2schemata ./demo.avdl ./
 	$(AVRO_TOOLS) fromjson --schema-file demo.avsc demo.json > tmp_demo.avro
 	$(AVRO_TOOLS) tojson tmp_demo.avro
+	pipenv run avro-tool.py -s demo.avsc dump
+	pipenv run avro-tool.py -s demo.avsc enc -i demo.json -o tmp_demo_schemaless.avro
+	hexdump -c tmp_demo_schemaless.avro
+	pipenv run avro-tool.py -s demo.avsc dec -i tmp_demo_schemaless.avro
 
 
 clean:

@@ -8,6 +8,7 @@ requests = "*"
 click = "*"
 PyYAML = "*"
 kafka-python = "*"
+fastavro = "*"
 
 [dev-packages]
 
