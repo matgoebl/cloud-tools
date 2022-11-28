@@ -1,5 +1,5 @@
 export NAMESPACE=kafka-test
-export IMAGEURL=
+export IMAGEURL=ghcr.io/matgoebl/cloud-tools:latest
 
 all: install forward list send recv forward-kill
 
