@@ -1,4 +1,5 @@
 export NAMESPACE=kafka-test
+export IMAGEURL=
 
 all: install forward list send recv forward-kill
 
@@ -16,7 +17,8 @@ destroy:
 
 export NAMESPACE=kafka-test
 export KAFKA_SERVICE=my-cluster-kafka-brokers
-export KAFKA_CLIENT_DNSMAP=my-cluster-kafka-0.$(KAFKA_SERVICE).$(NAMESPACE).svc:9093=localhost:9093
+export KAFKA_CLIENT_BOOTSTRAP=my-cluster-kafka-0.$(KAFKA_SERVICE).$(NAMESPACE).svc:9093
+export KAFKA_CLIENT_DNSMAP=$(KAFKA_CLIENT_BOOTSTRAP)=localhost:9093
 export KAFKA_CLIENT_INSECURE=true
 export KAFKA_CLIENT_USERNAME=demo-user
 export KAFKA_CLIENT_PASSWORD=$(shell kubectl --namespace $(NAMESPACE) get secret/$(KAFKA_CLIENT_USERNAME) -o json | jq .data.password -r | base64 -d)

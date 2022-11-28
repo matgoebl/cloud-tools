@@ -31,7 +31,7 @@ spec:
         command: [ "/bin/sleep", "999999d"]
         env:
         - name: KAFKA_CLIENT_BOOTSTRAP
-          value: "my-cluster-kafka-0.$KAFKA_SERVICE.$NAMESPACE.svc:9093"
+          value: "$KAFKA_CLIENT_BOOTSTRAP"
         - name: KAFKA_CLIENT_INSECURE
           value: "$KAFKA_CLIENT_INSECURE"
         - name: KAFKA_CLIENT_USERNAME
