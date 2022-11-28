@@ -28,6 +28,6 @@ image:
 
 imagerun:
 	docker build -t $(IMAGE) .
-	docker run -it $(IMAGE)
+	docker run -it $(IMAGE) /bin/bash
 
 .PHONY: all clean distclean install image imagerun
