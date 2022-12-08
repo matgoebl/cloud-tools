@@ -107,8 +107,9 @@ default_writefile = "msg%05i"
 @click.option('-k', '--key',           help='Filter for messages with the given key.')
 @click.option('-s', '--searchpayload', help='Filter for message whose payload matches the given regex.')
 @click.option('-S', '--searchheader',  help='Filter for message whose headers match the given regex.')
+@click.option('-q', '--quiet',         help='By quiet.', is_flag=True)
 @click.pass_context
-def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchheader):
+def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchheader, quiet):
     """Receive messages."""
     consumer = KafkaConsumer(**ctx.obj['consumer_args'])
     topicpartitions = [TopicPartition(topic, partition) for partition in consumer.partitions_for_topic(topic)]
@@ -139,6 +140,7 @@ def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchh
         writefile = default_writefile
 
     n = 0
+    m = 0
     while n < count or follow:
         topic_msgs = consumer.poll(timeout_ms=1000)
         for topic, msgs in topic_msgs.items():
@@ -146,18 +148,32 @@ def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchh
                 if n < count or follow:
                     n = n + 1
                     logging.debug(f"Received message: {msg}")
-                    if key and msg.key.decode('utf-8') != key:
+
+                    if key and msg.key.decode('utf-8', 'ignore') != key:
                         continue
-                    if searchpayload and not re.search(searchpayload, msg.value.decode('utf-8'), flags=re.IGNORECASE):
+
+                    if searchpayload and not re.search(searchpayload, msg.value.decode('utf-8', 'ignore'), flags=re.IGNORECASE):
                         continue
+
                     headers = ""
-                    for header in msg.headers:
-                        headers += f"{header[0]}:{header[1].decode('utf-8')}\n"
-                    headers_oneline = headers.replace('\n',';')
+                    for k,v in msg.headers:
+                        try:
+                            v = v.decode('utf-8','strict')
+                        except:
+                            pass
+                        headers += f"{k}:{v}\n"
+
+                    headers_oneline = ';' + headers.replace('\n',';')
+
                     if searchheader and not re.search(searchheader, headers_oneline, flags=re.IGNORECASE):
                         continue
+
+                    m = m + 1
+
                     dt = datetime.datetime.fromtimestamp(msg.timestamp//1000).replace(microsecond=msg.timestamp % 1000*1000).astimezone().isoformat()
-                    print("%s %s(%d)%d [%s] %s:%s" % (dt, topic.topic, topic.partition, msg.offset, headers_oneline, msg.key, msg.value))
+                    if not quiet:
+                        print("%s %s(%d)%d [%s] %s:%s" % (dt, topic.topic, topic.partition, msg.offset, headers_oneline, msg.key, msg.value))
+
                     if writefile:
                         basefilename = writefile % n
                         logging.debug(f"Writing to {basefilename}.data and {basefilename}.header")
@@ -167,6 +183,9 @@ def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchh
                             f.write(msg.key)
                         with open(basefilename + '.header', 'w') as f:
                             f.write(headers)
+
+    if key or searchpayload or searchheader:
+        print(f"# filtered {m} of {n} received messages")
 
 
 if __name__ == '__main__':

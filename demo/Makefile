@@ -15,7 +15,6 @@ destroy:
 	-kubectl delete namespace $(NAMESPACE)
 
 
-export NAMESPACE=kafka-test
 export KAFKA_SERVICE=my-cluster-kafka-brokers
 export KAFKA_CLIENT_BOOTSTRAP=my-cluster-kafka-0.$(KAFKA_SERVICE).$(NAMESPACE).svc:9093
 export KAFKA_CLIENT_DNSMAP=$(KAFKA_CLIENT_BOOTSTRAP)=localhost:9093
