@@ -57,10 +57,13 @@ avro-demo:
 
 
 cloud-tools-deploy:
-	./cloud-tools-deploy.sh
+	../cloud-tools-deploy.sh
+
+cloud-tools-delete:
+	../cloud-tools-deploy.sh -d
 
 
 clean:
 	rm -f tmp*
 
-.PHONY: all install destroy forward list send recv avro-demo clean
+.PHONY: all install destroy forward forward-kill list send recv avro-demo clean cloud-tools-deploy cloud-tools-delete
