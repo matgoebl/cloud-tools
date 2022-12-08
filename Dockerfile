@@ -7,7 +7,7 @@ RUN pipenv sync
 
 FROM docker.io/python:3.9-bullseye
 RUN apt-get update && apt-get -y upgrade
-RUN apt install -y curl jq less joe traceroute mtr nmap strace dnsutils openssl redir iproute2
+RUN apt install -y curl jq less joe traceroute mtr nmap strace dnsutils openssl redir iproute2 kubernetes-client awscli
 
 RUN adduser --uid 1000 --home /app --no-create-home --disabled-password --gecos User --shell /bin/sh user
 COPY --from=builder /app/.venv/ /app/.venv/

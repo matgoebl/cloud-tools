@@ -32,12 +32,17 @@ spec:
         env:
         - name: KAFKA_CLIENT_BOOTSTRAP
           value: "$KAFKA_CLIENT_BOOTSTRAP"
-        - name: KAFKA_CLIENT_INSECURE
-          value: "$KAFKA_CLIENT_INSECURE"
         - name: KAFKA_CLIENT_USERNAME
           value: "$KAFKA_CLIENT_USERNAME"
         - name: KAFKA_CLIENT_PASSWORD
           value: "$KAFKA_CLIENT_PASSWORD"
+        volumeMounts:
+        - name: data
+          mountPath: "/data"
+      volumes:
+        - name: data
+          emptyDir:
+            sizeLimit: 1Gi
 __X__
 
 _kubectl_search_pod() {(

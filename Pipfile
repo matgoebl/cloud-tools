@@ -9,6 +9,7 @@ click = "*"
 PyYAML = "*"
 kafka-python = "*"
 fastavro = "*"
+lz4 = "*"
 
 [dev-packages]
 
