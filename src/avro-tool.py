@@ -34,7 +34,7 @@ def dec(ctx, input, skipheader, output):
         header_bytes = input.read(skipheader)
         print(f"header: {header_bytes}", file=sys.stderr)
     decoded_payload = fastavro.schemaless_reader(input, ctx.obj['parsed_schema'])
-    output.write(json.dumps(decoded_payload, indent=1))
+    output.write(json.dumps(decoded_payload, indent=4, sort_keys=True, default=str))
 
 
 @avro_tool.command()

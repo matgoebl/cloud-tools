@@ -15,7 +15,12 @@ usage ()
 {
  echo "usage: $0 [OPTS] [ARGS]"
  sed -n 's/^   \(.\))#\(.*\)$/ -\1 \2/p' < $0
- echo ""
+ echo
+ echo "The following environment variables should be set when using kafka-client.py:"
+ echo "- KAFKA_CLIENT_BOOTSTRAP"
+ echo "- KAFKA_CLIENT_USERNAME"
+ echo "- KAFKA_CLIENT_PASSWORD"
+ echo
 }
 
 OP="deploy"
@@ -24,13 +29,14 @@ while getopts di:o:n:h opt; do
    d)#  Delete deployment
       OP="delete"
       ;;
-   i)#DIR  Upload directory DIR to /data/, before executing the pod shell
+   i)#DIR  Upload directory DIR to /data/, before executing the pod shell (default 'in/', if existing)
       INDIR="$OPTARG"
       ;;
-   o)#DIR  Download /data/out/ to directory DIR, after executing the pod shell
+   o)#DIR  Download /data/out/ to directory DIR, after executing the pod shell (default 'out/', if existing)
       OUTDIR="$OPTARG"
+      mkdir -p "$OUTDIR"
       ;;
-   n)#NAMESPACE  Set namespace (otherwise 'default')
+   n)#NAMESPACE  Set namespace (default is 'default')
       NAMESPACE="$OPTARG"
       ;;
    h)#  Show help
@@ -117,7 +123,7 @@ echo "Connecting to $namespace:$pod ..."
 echo
 
 [ "$#" != "0" ] && CMD="-c"
-kubectl --namespace "$namespace" exec -it "$pod" -- /bin/bash ${CMD:-} "$@"
+kubectl --namespace "$namespace" exec -it "$pod" -- /bin/bash ${CMD:-} "$@" || true
 
 if [ -n "$OUTDIR" ]; then
  echo "Downloading $OUTDIR ..."

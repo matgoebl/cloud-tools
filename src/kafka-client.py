@@ -107,9 +107,10 @@ default_writefile = "msg%05i"
 @click.option('-k', '--key',           help='Filter for messages with the given key.')
 @click.option('-s', '--searchpayload', help='Filter for message whose payload matches the given regex.')
 @click.option('-S', '--searchheader',  help='Filter for message whose headers match the given regex.')
+@click.option('-X', '--extractheader', help='Extract and output the given header field for each message.')
 @click.option('-q', '--quiet',         help='By quiet.', is_flag=True)
 @click.pass_context
-def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchheader, quiet):
+def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchheader, extractheader, quiet):
     """Receive messages."""
     consumer = KafkaConsumer(**ctx.obj['consumer_args'])
     topicpartitions = [TopicPartition(topic, partition) for partition in consumer.partitions_for_topic(topic)]
@@ -143,6 +144,8 @@ def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchh
     m = 0
     while n < count or follow:
         topic_msgs = consumer.poll(timeout_ms=1000)
+        if len(topic_msgs) == 0 and not follow:
+            break
         for topic, msgs in topic_msgs.items():
             for msg in msgs:
                 if n < count or follow:
@@ -162,6 +165,8 @@ def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchh
                         except:
                             pass
                         headers += f"{k}:{v}\n"
+                        if extractheader and k == extractheader:
+                            print(f"{k}:{v}")
 
                     headers_oneline = ';' + headers.replace('\n',';')
 
