@@ -2,8 +2,8 @@
 set -euo pipefail
 IFS=$' \n\t'
 
-DEPLOYMENTNAME="cloud-tools-`uname -n|tr A-Z a-z|tr -dc a-z0-9`-`id -un|tr A-Z a-z|tr -dc a-z0-9`"
-NAMESPACE="default"
+IDENTIFIER="cloud-tools-`uname -n|tr A-Z a-z|tr -dc a-z0-9`-`id -un|tr A-Z a-z|tr -dc a-z0-9`"
+[ -z "${NAMESPACE:-}" ] && NAMESPACE="default"
 
 INDIR=""
 [ -d "in/" ] && INDIR="in/"
@@ -20,6 +20,7 @@ usage ()
  echo "- KAFKA_CLIENT_BOOTSTRAP"
  echo "- KAFKA_CLIENT_USERNAME"
  echo "- KAFKA_CLIENT_PASSWORD"
+ echo "- KAFKA_CLIENT_INSECURE"
  echo
 }
 
@@ -52,7 +53,7 @@ shift $(($OPTIND - 1))
 
 
 if [ "$OP" = "delete" ]; then
- kubectl --namespace $NAMESPACE delete deployments $DEPLOYMENTNAME || true
+ kubectl --namespace $NAMESPACE delete job/$IDENTIFIER || true
  exit 0
 fi
 
@@ -61,7 +62,7 @@ kubectl --namespace $NAMESPACE apply -f - <<__X__
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: $DEPLOYMENTNAME
+  name: $IDENTIFIER
 spec:
   activeDeadlineSeconds: 57600
   ttlSecondsAfterFinished: 600
@@ -70,7 +71,7 @@ spec:
       restartPolicy: Never
       containers:
       - image: ${IMAGEURL:-ghcr.io/matgoebl/cloud-tools:latest}
-        name: $DEPLOYMENTNAME
+        name: $IDENTIFIER
         resources:
           requests:
             cpu: "1m"
@@ -92,6 +93,8 @@ spec:
           value: "${KAFKA_CLIENT_USERNAME:-}"
         - name: KAFKA_CLIENT_PASSWORD
           value: "${KAFKA_CLIENT_PASSWORD:-}"
+        - name: KAFKA_CLIENT_INSECURE
+          value: "${KAFKA_CLIENT_INSECURE:-false}"
         volumeMounts:
         - name: data
           mountPath: "/data"
@@ -102,12 +105,12 @@ spec:
 __X__
 
 
-echo -n "Waiting for pod '$DEPLOYMENTNAME': "
+echo -n "Waiting for pod '$IDENTIFIER': "
 pod=""
 while [ -z "$pod" ]; do
  echo -n .
  sleep 1
- read namespace pod < <( kubectl get pods --all-namespaces --sort-by=.metadata.creationTimestamp | sed -ne 's/^\('"$NAMESPACE"'\)  *\('"$DEPLOYMENTNAME"'[^ ]*\) .*Running.*$/\1 \2/p' | tail -n 1; echo)
+ read namespace pod < <( kubectl get pods --all-namespaces --sort-by=.metadata.creationTimestamp | sed -ne 's/^\('"$NAMESPACE"'\)  *\('"$IDENTIFIER"'[^ ]*\) .*Running.*$/\1 \2/p' | tail -n 1; echo)
 done
 echo
 
