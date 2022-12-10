@@ -97,13 +97,12 @@ def send(ctx, topic, key, headers, payload, headersfile, payloadfile):
     producer.flush()
 
 
-default_writefile = "msg%05i"
 @kafka_client.command()
 @click.option('-t', '--topic',         help='Topic to receive from.', required=True)
 @click.option('-c', '--count',         help='Number of messages to receive (will be rounded to multiple of partitions).', type=int, default=1, show_default=True)
 @click.option('-f', '--follow',        help='Wait for new messages.', is_flag=True)
 @click.option('-j', '--jump',          help='Jump to given date and time.')
-@click.option('-w', '--writefile',     help='Write messages (.data), headers (.header) and key (.key) to files using the given pattern. "." is a shortcut for ' + default_writefile)
+@click.option('-w', '--writefile',     help='Write messages (.data), headers (.header) and key (.key) to files using the given pattern. "." is a shortcut for <topic>.%05i')
 @click.option('-k', '--key',           help='Filter for messages with the given key.')
 @click.option('-s', '--searchpayload', help='Filter for message whose payload matches the given regex.')
 @click.option('-S', '--searchheader',  help='Filter for message whose headers match the given regex.')
@@ -138,7 +137,7 @@ def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchh
 
 
     if writefile == '.':
-        writefile = default_writefile
+        writefile = topic + ".%05i"
 
     n = 0
     m = 0
