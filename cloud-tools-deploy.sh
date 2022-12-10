@@ -24,10 +24,13 @@ usage ()
 }
 
 OP="deploy"
-while getopts di:o:n:h opt; do
+while getopts dfi:o:n:h opt; do
  case "$opt" in
    d)#  Delete deployment
       OP="delete"
+      ;;
+   f)#  Run only port-forwarding to socks5 server
+      OP="forward"
       ;;
    i)#DIR  Upload directory DIR to /data/, before executing the pod shell (default 'in/', if existing)
       INDIR="$OPTARG"
@@ -55,22 +58,16 @@ fi
 
 
 kubectl --namespace $NAMESPACE apply -f - <<__X__
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: $DEPLOYMENTNAME
-  labels:
-    app: $DEPLOYMENTNAME
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: $DEPLOYMENTNAME
+  activeDeadlineSeconds: 57600
+  ttlSecondsAfterFinished: 600
   template:
-    metadata:
-      labels:
-        app: $DEPLOYMENTNAME
     spec:
+      restartPolicy: Never
       containers:
       - image: ${IMAGEURL:-ghcr.io/matgoebl/cloud-tools:latest}
         name: $DEPLOYMENTNAME
@@ -83,7 +80,7 @@ spec:
             cpu: "1000m"
             memory: "256Mi"
             ephemeral-storage: "2Gi"
-        command: [ "/bin/sleep", "999999d"]
+        command: [ "/usr/bin/microsocks"]
         lifecycle:
           postStart:
             exec:
@@ -113,6 +110,11 @@ while [ -z "$pod" ]; do
  read namespace pod < <( kubectl get pods --all-namespaces --sort-by=.metadata.creationTimestamp | sed -ne 's/^\('"$NAMESPACE"'\)  *\('"$DEPLOYMENTNAME"'[^ ]*\) .*Running.*$/\1 \2/p' | tail -n 1; echo)
 done
 echo
+
+if [ "$OP" = "forward" ]; then
+ kubectl --namespace $NAMESPACE port-forward --address 127.0.0.1 $pod 1080:1080
+ exit 0
+fi
 
 if [ -n "$INDIR" ]; then
  echo "Uploading $INDIR ..."
