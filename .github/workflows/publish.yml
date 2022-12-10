@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - '*'
     tags:
       - '*'
 
@@ -14,7 +15,7 @@ env:
 
 jobs:
   build-and-push-image:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: read
       packages: write
@@ -39,7 +40,12 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=ref,event=pr
+            type=semver,pattern={{version}}
             type=raw,value=latest,enable={{is_default_branch}}
+            type=schedule
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v3
