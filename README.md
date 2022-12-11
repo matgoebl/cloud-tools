@@ -26,6 +26,23 @@ To manually remove the pod use:
 
     ./cloud-tools-deploy.sh -d
 
+Get help:
+
+    $ ./cloud-tools-deploy.sh -h
+    usage: ./cloud-tools-deploy.sh [OPTS] [ARGS]
+    -d   Delete deployment
+    -f   Run only port-forwarding to socks5 server
+    -i DIR  Upload directory DIR to /data/, before executing the pod shell (default 'in/', if existing)
+    -o DIR  Download /data/out/ to directory DIR, after executing the pod shell (default 'out/', if existing)
+    -n NAMESPACE  Set namespace (default is 'default')
+    -h   Show help
+
+    The following environment variables should be set when using kafka-client.py:
+    - KAFKA_CLIENT_BOOTSTRAP
+    - KAFKA_CLIENT_USERNAME
+    - KAFKA_CLIENT_PASSWORD
+    - KAFKA_CLIENT_INSECURE
+
 
 ## Using SOCKS5H for a local tunnel
 
