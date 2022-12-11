@@ -3,7 +3,7 @@ export BUILDTAG:=$(shell date +%Y%m%d.%H%M%S)
 export ENV PIPENV_VENV_IN_PROJECT=1
 VENV=.venv
 
-all:
+all: image
 
 $(VENV):
 	python3 -m pip install --user virtualenv pipenv
@@ -21,7 +21,7 @@ clean:
 distclean: clean
 	rm -rf Pipfile.lock
 
-image:
+image: $(VENV)
 	docker build --build-arg BUILDTAG=$(BUILDTAG) -t $(IMAGE) .
 	docker tag $(IMAGE) $(DOCKER_REGISTRY)/$(IMAGE):$(BUILDTAG)
 	docker push $(DOCKER_REGISTRY)/$(IMAGE):$(BUILDTAG)
@@ -30,4 +30,13 @@ imagerun:
 	docker build -t $(IMAGE) .
 	docker run -it $(IMAGE) /bin/bash
 
-.PHONY: all clean distclean install image imagerun
+
+export IMAGEURL:=$(DOCKER_REGISTRY)/$(IMAGE):$(BUILDTAG)
+
+cloud-tools-deploy: image
+	./cloud-tools-deploy.sh
+
+cloud-tools-delete:
+	./cloud-tools-deploy.sh -d
+
+.PHONY: all clean distclean install image imagerun sh cloud-tools-deploy cloud-tools-delete
