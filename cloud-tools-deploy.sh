@@ -27,8 +27,8 @@ usage ()
 OP="deploy"
 while getopts dfi:o:n:h opt; do
  case "$opt" in
-   d)#  Delete deployment
-      OP="delete"
+   d)#  Destroy deployment
+      OP="destroy"
       ;;
    f)#  Run only port-forwarding to socks5 server
       OP="forward"
@@ -52,7 +52,7 @@ done
 shift $(($OPTIND - 1))
 
 
-if [ "$OP" = "delete" ]; then
+if [ "$OP" = "destroy" ]; then
  kubectl --namespace $NAMESPACE delete job/$IDENTIFIER || true
  exit 0
 fi

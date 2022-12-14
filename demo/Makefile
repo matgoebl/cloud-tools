@@ -1,6 +1,6 @@
 export NAMESPACE=kafka-test
 export IMAGEURL=ghcr.io/matgoebl/cloud-tools:latest
-
+SRC=$(PWD)/../src
 all: install forward list send recv forward-kill
 
 install:
@@ -22,7 +22,7 @@ export KAFKA_CLIENT_INSECURE=true
 export KAFKA_CLIENT_USERNAME=demo-user
 export KAFKA_CLIENT_PASSWORD=$(shell kubectl --namespace $(NAMESPACE) get secret/$(KAFKA_CLIENT_USERNAME) -o json | jq .data.password -r | base64 -d)
 export ENV PIPENV_VENV_IN_PROJECT=1
-export PATH:=$(PATH):$(PWD)/../src/
+export PATH:=$(SRC):$(PATH)
 
 forward:
 	@echo "Forward bootstrap server and broker ports..."
@@ -45,7 +45,7 @@ sh:
 	pipenv shell
 
 
-AVRO_TOOLS=java -jar ../.venv/avro-tools-1.11.1.jar
+AVRO_TOOLS=java -jar $(SRC)/.venv/avro-tools-1.11.1.jar
 avro-demo:
 	$(AVRO_TOOLS) idl2schemata ./demo.avdl ./
 	$(AVRO_TOOLS) fromjson --schema-file demo.avsc demo.json > tmp_demo.avro
@@ -57,13 +57,13 @@ avro-demo:
 
 
 cloud-tools-deploy:
-	../cloud-tools-deploy.sh
+	$(SRC)/cloud-tools-deploy.sh
 
-cloud-tools-delete:
-	../cloud-tools-deploy.sh -d
+cloud-tools-destroy:
+	$(SRC)/cloud-tools-deploy.sh -d
 
 
 clean:
 	rm -f tmp*
 
-.PHONY: all install destroy forward forward-kill list send recv avro-demo clean cloud-tools-deploy cloud-tools-delete
+.PHONY: all install destroy forward forward-kill list send recv avro-demo clean cloud-tools-deploy cloud-tools-destroy

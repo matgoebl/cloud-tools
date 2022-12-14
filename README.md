@@ -30,7 +30,7 @@ Get help:
 
     $ ./cloud-tools-deploy.sh -h
     usage: ./cloud-tools-deploy.sh [OPTS] [ARGS]
-    -d   Delete deployment
+    -d   Destroy deployment
     -f   Run only port-forwarding to socks5 server
     -i DIR  Upload directory DIR to /data/, before executing the pod shell (default 'in/', if existing)
     -o DIR  Download /data/out/ to directory DIR, after executing the pod shell (default 'out/', if existing)
@@ -270,7 +270,7 @@ Encode and decode a test message:
 Set your own registry and build:
 
     export DOCKER_REGISTRY=myregistry.example.org:5000
-    make image cloud-tools-deploy
+    cd src && make cloud-tools-destroy image cloud-tools-deploy
 
 
 ## Run kafka demo

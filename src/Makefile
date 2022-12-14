@@ -34,9 +34,9 @@ imagerun:
 export IMAGEURL:=$(DOCKER_REGISTRY)/$(IMAGE):$(BUILDTAG)
 
 cloud-tools-deploy: image
-	./cloud-tools-deploy.sh
+	../cloud-tools-deploy.sh
 
-cloud-tools-delete:
-	./cloud-tools-deploy.sh -d
+cloud-tools-destroy:
+	-../cloud-tools-deploy.sh -d
 
-.PHONY: all clean distclean install image imagerun sh cloud-tools-deploy cloud-tools-delete
+.PHONY: all clean distclean install image imagerun sh cloud-tools-deploy cloud-tools-destroy

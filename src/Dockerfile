@@ -11,7 +11,7 @@ RUN apt install -y curl jq less joe traceroute mtr netcat socat nmap strace dnsu
 
 RUN adduser --uid 1000 --home /app --no-create-home --disabled-password --gecos User --shell /bin/sh user
 COPY --from=builder /app/.venv/ /app/.venv/
-ADD src/ /app/
+ADD * /app/
 COPY bashrc /app/.bashrc
 ARG BUILDTAG=unknown
 ENV BUILDTAG=${BUILDTAG}
