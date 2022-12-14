@@ -5,6 +5,10 @@ Some of my Cloud Tools, including kafka sender/receiver and AVRO encoder/decoder
 
 Published under the Apache License 2.0.
 
+https://github.com/matgoebl/cloud-tools/
+
+[![Create and Publish Docker Image to ghcr.io](https://github.com/matgoebl/cloud-tools/actions/workflows/publish.yml/badge.svg)](https://github.com/matgoebl/cloud-tools/actions/workflows/publish.yml)
+
 
 ## Quickstart
 
