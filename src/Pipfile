@@ -10,8 +10,15 @@ PyYAML = "*"
 kafka-python = "*"
 fastavro = "*"
 lz4 = "*"
+python-dotenv = "*"
+jsonpath-ng = "*"
+aws-kinesis-agg = "*"
+aws-glue-schema-registry = "*"
 
 [dev-packages]
 
 [requires]
 python_version = "3.9"
+
+[packages.e894b65]
+file = "https://github.com/matgoebl/kinesis-python/archive/refs/heads/master.zip"
