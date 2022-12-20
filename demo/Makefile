@@ -57,10 +57,10 @@ avro-demo:
 
 
 cloud-tools-deploy:
-	$(SRC)/cloud-tools-deploy.sh
+	../cloud-tools-deploy.sh
 
 cloud-tools-destroy:
-	$(SRC)/cloud-tools-deploy.sh -d
+	../cloud-tools-deploy.sh -d
 
 
 clean:

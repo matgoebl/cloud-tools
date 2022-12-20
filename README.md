@@ -56,7 +56,7 @@ Start the tunnel:
 
 On another terminal, local software can use the tunnel, e.g.
 
-    curl --proxy socks5://127.0.0.1:1080 -ki https://kubernetes.default.svc.cluster.local
+    curl --proxy socks5h://127.0.0.1:1080 -ki https://kubernetes.default.svc.cluster.local
 
 
 ## Kafka kafka send/receive and AVRO encode/decode on a pod
@@ -142,9 +142,11 @@ or
                                 multiple of partitions).  [default: 1]
     -f, --follow              Wait for new messages.
     -j, --jump TEXT           Jump to given date and time.
-    -w, --writefile TEXT      Write messages (.data), headers (.header) and key
-                                (.key) to files using the given pattern. "." is a
-                                shortcut for <topic>.%05i
+    -w, --writefilepath TEXT  Write messages (.data), headers (.header) and keys
+                              (.key) to files named <topic>.<number> at the
+                              given path (e.g. "."). The header may contain
+                              string dumps, that cannot be transparently sent
+                              again via "send" command.
     -k, --key TEXT            Filter for messages with the given key.
     -s, --searchpayload TEXT  Filter for message whose payload matches the given
                                 regex.
@@ -164,7 +166,7 @@ or
 ### Receive kafka messages
 
     user@cloud-tools-myhost-myuser--abcd123:/data$ kafka-client.py recv -t test
-    2022-12-11T19:26:41.620000+00:00 test(0)1 [;SomeHeader:123;] b'somekey':b'{"hello":"world!"}'
+    2022-12-11T19:26:41.620000+00:00 test(0)1 [SomeHeader:123] b'somekey':b'{"hello":"world!"}'
 
 Write messages to files:
 
@@ -174,7 +176,7 @@ Write messages to files:
     user@cloud-tools-myhost-myuser--abcd123:/data$ cd out
 
     user@cloud-tools-myhost-myuser--abcd123:/data/out$ kafka-client.py recv -t test -w .
-    2022-12-11T19:26:41.620000+00:00 test(0)1 [;SomeHeader:123;] b'somekey':b'{"hello":"world!"}'
+    2022-12-11T19:26:41.620000+00:00 test(0)1 [SomeHeader:123] b'somekey':b'{"hello":"world!"}'
 
     user@cloud-tools-myhost-myuser--abcd123:/data/out$ head -n999 test.00001.*
     ==> test.00001.data <==

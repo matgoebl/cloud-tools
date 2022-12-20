@@ -1,4 +1,4 @@
-export IMAGE=$(shell basename $(PWD))
+export IMAGE=$(shell cd .. && basename $$PWD)
 export BUILDTAG:=$(shell date +%Y%m%d.%H%M%S)
 export ENV PIPENV_VENV_IN_PROJECT=1
 VENV=.venv

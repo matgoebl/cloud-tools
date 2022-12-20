@@ -102,14 +102,14 @@ def send(ctx, topic, key, headers, payload, headersfile, payloadfile):
 @click.option('-c', '--count',         help='Number of messages to receive (will be rounded to multiple of partitions).', type=int, default=1, show_default=True)
 @click.option('-f', '--follow',        help='Wait for new messages.', is_flag=True)
 @click.option('-j', '--jump',          help='Jump to given date and time.')
-@click.option('-w', '--writefile',     help='Write messages (.data), headers (.header) and key (.key) to files using the given pattern. "." is a shortcut for <topic>.%05i')
+@click.option('-w', '--writefilepath', help='Write messages (.data), headers (.header) and keys (.key) to files named <topic>.<number> at the given path (e.g. "."). The header may contain string dumps, that cannot be transparently sent again via "send" command.')
 @click.option('-k', '--key',           help='Filter for messages with the given key.')
 @click.option('-s', '--searchpayload', help='Filter for message whose payload matches the given regex.')
 @click.option('-S', '--searchheader',  help='Filter for message whose headers match the given regex.')
 @click.option('-X', '--extractheader', help='Extract and output the given header field for each message.')
 @click.option('-q', '--quiet',         help='By quiet.', is_flag=True)
 @click.pass_context
-def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchheader, extractheader, quiet):
+def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, searchheader, extractheader, quiet):
     """Receive messages."""
     consumer = KafkaConsumer(**ctx.obj['consumer_args'])
     topicpartitions = [TopicPartition(topic, partition) for partition in consumer.partitions_for_topic(topic)]
@@ -135,9 +135,6 @@ def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchh
     if count_max < count:
         count = count_max
 
-
-    if writefile == '.':
-        writefile = topic + ".%05i"
 
     n = 0
     m = 0
@@ -167,9 +164,9 @@ def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchh
                         if extractheader and k == extractheader:
                             print(f"{k}:{v}")
 
-                    headers_oneline = ';' + headers.replace('\n',';')
+                    headers_oneline = headers.removesuffix('\n').replace('\n',';')
 
-                    if searchheader and not re.search(searchheader, headers_oneline, flags=re.IGNORECASE):
+                    if searchheader and not re.search('^'+searchheader+'$', headers, flags=re.IGNORECASE|re.MULTILINE):
                         continue
 
                     m = m + 1
@@ -178,9 +175,9 @@ def recv(ctx, topic, count, follow, jump, writefile, key, searchpayload, searchh
                     if not quiet:
                         print("%s %s(%d)%d [%s] %s:%s" % (dt, topic.topic, topic.partition, msg.offset, headers_oneline, msg.key, msg.value))
 
-                    if writefile:
-                        basefilename = writefile % n
-                        logging.debug(f"Writing to {basefilename}.data and {basefilename}.header")
+                    if writefilepath:
+                        basefilename = os.path.join(writefilepath, "%s.%05i" % (topic.topic,n))
+                        logging.debug(f"Writing to {basefilename}.data, .header and .key")
                         with open(basefilename + '.data', 'wb') as f:
                             f.write(msg.value)
                         with open(basefilename + '.key', 'wb') as f:
