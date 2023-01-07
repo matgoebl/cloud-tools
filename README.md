@@ -48,15 +48,29 @@ Get help:
     - KAFKA_CLIENT_INSECURE
 
 
-## Using SOCKS5H for a local tunnel
+## Using SOCKS5H for a local socks tunnel
 
-Start the tunnel:
+Start the socks tunnel, it uses [MicroSocks](https://github.com/rofl0r/microsocks):
 
     ./cloud-tools-deploy.sh -f
 
-On another terminal, local software can use the tunnel, e.g.
+On another terminal, local software can use the socks5 proxy, e.g.
 
     curl --proxy socks5h://127.0.0.1:1080 -ki https://kubernetes.default.svc.cluster.local
+
+
+## Using Tinyproxy for a local http tunnel
+
+Start the http tunnel, it uses [Tinyproxy](https://tinyproxy.github.io):
+
+    ./cloud-tools-deploy.sh -d
+    ./cloud-tools-deploy.sh -f -p
+
+On another terminal, local software can use the http(s) proxy, e.g.
+
+    export https_proxy=http://127.0.0.1:1080
+    export http_proxy=http://127.0.0.1:1080
+    curl -ki https://kubernetes.default.svc.cluster.local
 
 
 ## Kafka kafka send/receive and AVRO encode/decode on a pod
