@@ -11,6 +11,8 @@ INDIR=""
 OUTDIR=""
 [ -d "out/" ] && OUTDIR="out/"
 
+[ -z "${PROXYCMD:-}" ] && PROXYCMD='"/usr/bin/microsocks"'
+
 usage ()
 {
  echo "usage: $0 [OPTS] [ARGS]"
@@ -25,13 +27,19 @@ usage ()
 }
 
 OP="deploy"
-while getopts dfi:o:n:h opt; do
+while getopts dfpsi:o:n:h opt; do
  case "$opt" in
    d)#  Destroy deployment
       OP="destroy"
       ;;
-   f)#  Run only port-forwarding to socks5 server
+   f)#  Run only port-forwarding to proxy
       OP="forward"
+      ;;
+   p)#  Run http(s) proxy as proxy
+      PROXYCMD='"/usr/bin/tinyproxy","-d","-c","/app/tinyproxy.conf"'
+      ;;
+   s)#  Run socks5 server as proxy
+      PROXYCMD='"/usr/bin/microsocks"'
       ;;
    i)#DIR  Upload directory DIR to /data/, before executing the pod shell (default 'in/', if existing)
       INDIR="$OPTARG"
@@ -81,7 +89,7 @@ spec:
             cpu: "1000m"
             memory: "256Mi"
             ephemeral-storage: "2Gi"
-        command: [ "/usr/bin/microsocks"]
+        command: [ $PROXYCMD ]
         lifecycle:
           postStart:
             exec:
