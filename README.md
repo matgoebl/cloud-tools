@@ -48,6 +48,17 @@ Get help:
     - KAFKA_CLIENT_INSECURE
 
 
+## Error '...field is immutable'
+
+If you change the configuration of the deployment, you will get an error message like:
+
+    The Job "cloud-tools-xxx-yyy" is invalid: ...: field is immutable
+
+If this happens, just destroy the deploment first:
+
+    ./cloud-tools-deploy.sh -d
+
+
 ## Using SOCKS5H for a local socks tunnel
 
 Start the socks tunnel, it uses [MicroSocks](https://github.com/rofl0r/microsocks):
@@ -58,6 +69,11 @@ On another terminal, local software can use the socks5 proxy, e.g.
 
     curl --proxy socks5h://127.0.0.1:1080 -ki https://kubernetes.default.svc.cluster.local
 
+If an application does not provide socks support, you can try socksify (`apt install dante-client` in debian):
+
+    export SOCKS5_SERVER=127.0.0.1:1080
+    socksify curl -ki https://kubernetes.default.svc.cluster.local
+ 
 
 ## Using Tinyproxy for a local http tunnel
 
@@ -70,7 +86,10 @@ On another terminal, local software can use the http(s) proxy, e.g.
 
     export https_proxy=http://127.0.0.1:1080
     export http_proxy=http://127.0.0.1:1080
+    export no_proxy=mycluster.example.org,test.example.org
     curl -ki https://kubernetes.default.svc.cluster.local
+
+If you still want ot reach your cluster with `kubectl`, add the API server to the `no_proxy` environment variable.
 
 
 ## Kafka kafka send/receive and AVRO encode/decode on a pod
