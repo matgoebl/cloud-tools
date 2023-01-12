@@ -11,7 +11,8 @@ INDIR=""
 OUTDIR=""
 [ -d "out/" ] && OUTDIR="out/"
 
-[ -z "${PROXYCMD:-}" ] && PROXYCMD='"/usr/bin/microsocks"'
+[ -z "${PROXYCMD:-}" ] && PROXYCMD=' ["/usr/bin/microsocks"]'
+SCRIPT=''
 
 usage ()
 {
@@ -27,7 +28,7 @@ usage ()
 }
 
 OP="deploy"
-while getopts dfpsi:o:n:h opt; do
+while getopts dfpse:i:o:n:h opt; do
  case "$opt" in
    d)#  Destroy deployment
       OP="destroy"
@@ -36,13 +37,18 @@ while getopts dfpsi:o:n:h opt; do
       OP="forward"
       ;;
    p)#  Run http(s) proxy as proxy
-      PROXYCMD='"/usr/bin/tinyproxy","-d","-c","/app/tinyproxy.conf"'
+      PROXYCMD=' ["/usr/bin/tinyproxy","-d","-c","/app/tinyproxy.conf"]'
       ;;
    s)#  Run socks5 server as proxy
-      PROXYCMD='"/usr/bin/microsocks"'
+      PROXYCMD=' ["/usr/bin/microsocks"]'
       ;;
    i)#DIR  Upload directory DIR to /data/, before executing the pod shell (default 'in/', if existing)
       INDIR="$OPTARG"
+      ;;
+   e)#SCRIPT  Execute given shell script
+      PROXYCMD=''
+      SCRIPT="$OPTARG"
+      OP="script"
       ;;
    o)#DIR  Download /data/out/ to directory DIR, after executing the pod shell (default 'out/', if existing)
       OUTDIR="$OPTARG"
@@ -66,7 +72,8 @@ if [ "$OP" = "destroy" ]; then
 fi
 
 
-kubectl --namespace $NAMESPACE apply -f - <<__X__
+(
+ cat <<__X__
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -77,6 +84,10 @@ spec:
   template:
     spec:
       restartPolicy: Never
+      volumes:
+        - name: data
+          emptyDir:
+            sizeLimit: 1Gi
       containers:
       - image: ${IMAGEURL:-ghcr.io/matgoebl/cloud-tools:latest}
         name: $IDENTIFIER
@@ -89,7 +100,6 @@ spec:
             cpu: "1000m"
             memory: "256Mi"
             ephemeral-storage: "2Gi"
-        command: [ $PROXYCMD ]
         lifecycle:
           postStart:
             exec:
@@ -106,11 +116,18 @@ spec:
         volumeMounts:
         - name: data
           mountPath: "/data"
-      volumes:
-        - name: data
-          emptyDir:
-            sizeLimit: 1Gi
+        command:$PROXYCMD
 __X__
+ if [ -n "$SCRIPT" ]; then
+  (
+   echo '        - /bin/bash'
+   echo '        - -c'
+   echo '        - |'
+   sed -e 's/^/          /' < "$SCRIPT"
+  )
+ fi
+) | kubectl --namespace $NAMESPACE apply -f -
+
 
 
 echo -n "Waiting for pod '$IDENTIFIER': "
@@ -124,6 +141,11 @@ echo
 
 if [ "$OP" = "forward" ]; then
  kubectl --namespace $NAMESPACE port-forward --address 127.0.0.1 $pod 1080:1080
+ exit 0
+fi
+
+if [ "$OP" = "script" ]; then
+ kubectl --namespace $NAMESPACE logs -f $pod
  exit 0
 fi
 

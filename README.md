@@ -92,6 +92,14 @@ On another terminal, local software can use the http(s) proxy, e.g.
 If you still want ot reach your cluster with `kubectl`, add the API server to the `no_proxy` environment variable.
 
 
+## Execute a Shell Script
+
+You can upload, execute and watch the output of a shell script:
+
+    echo 'while sleep 1;do date; done' > test.sh
+    ./cloud-tools-deploy.sh -e test.sh
+
+
 ## Kafka kafka send/receive and AVRO encode/decode on a pod
 
 ### Set server and credentials
