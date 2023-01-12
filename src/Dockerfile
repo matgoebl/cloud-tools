@@ -12,7 +12,7 @@ RUN curl -O https://downloads.apache.org/kafka/3.3.1/kafka_$KAFKA_VERSION.tgz &&
 FROM docker.io/python:3.9-bullseye
 ARG KAFKA_VERSION
 RUN apt-get update && apt-get -y upgrade
-RUN apt install -y curl jq less joe traceroute mtr netcat socat nmap strace dnsutils openssl redir iproute2 kubernetes-client awscli microsocks tinyproxy default-jre-headless
+RUN apt install -y curl jq less joe iputils-ping traceroute mtr netcat socat nmap strace dnsutils openssl redir iproute2 kubernetes-client awscli microsocks tinyproxy default-jre-headless
 
 RUN adduser --uid 1000 --home /app --no-create-home --disabled-password --gecos User --shell /bin/sh user
 COPY --from=builder /app/.venv/ /app/.venv/
