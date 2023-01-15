@@ -39,7 +39,7 @@ send:
 	pipenv run kafka-client.py send -t demo-topic -k TEST-KEY -h 'abc:123;xyz:987' -p 'Hello World!'
 
 recv:
-	pipenv run kafka-client.py recv -t demo-topic -c 3
+	pipenv run kafka-client.py -v recv -t demo-topic -c 3
 
 sh:
 	pipenv shell
@@ -55,6 +55,11 @@ avro-demo:
 	hexdump -c tmp_demo_schemaless.avro
 	pipenv run avro-tool.py -s demo.avsc dec -i tmp_demo_schemaless.avro
 
+avrosend:
+	pipenv run kafka-client.py send -t demo -P tmp_demo_schemaless.avro
+
+avrorecv:
+	pipenv run kafka-client.py -I $(SRC) -v recv -t demo -c 1 -w .
 
 cloud-tools-deploy:
 	../cloud-tools-deploy.sh
