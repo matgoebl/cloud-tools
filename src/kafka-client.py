@@ -8,6 +8,9 @@ import datetime
 import logging
 import ssl
 import math
+import json
+from yapsy.PluginManager import PluginManager, IPluginLocator
+from yapsy.PluginFileLocator import PluginFileLocator, PluginFileAnalyzerMathingRegex
 
 @click.group()
 @click.option('-b', '--bootstrap', help='Kafka bootstrap server.', default='localhost:9093', show_default=True)
@@ -16,8 +19,9 @@ import math
 @click.option('-P', '--password', help='Kafka password.')
 @click.option('-S', '--insecure', help='Do not verfy SSL.', is_flag=True)
 @click.option('-M', '--dnsmap', help='Remap DNS names.')
+@click.option('-I', '--pluginpath',    help='Load encoder/decoder plugins from given path.')
 @click.pass_context
-def kafka_client(ctx, bootstrap, username, password, insecure, dnsmap, verbose):
+def kafka_client(ctx, bootstrap, username, password, insecure, dnsmap, pluginpath, verbose):
     """Receive messages."""
     logging.basicConfig(level=logging.WARNING-10*verbose,handlers=[logging.StreamHandler()],format="[%(levelname)s] %(message)s")
     ctx.obj = {}
@@ -54,6 +58,14 @@ def kafka_client(ctx, bootstrap, username, password, insecure, dnsmap, verbose):
     if dnsmap:
         import dnsremap
         dnsremap.dnsmap = dnsmap
+
+    if pluginpath:
+        locator = PluginFileLocator()
+        locator.setAnalyzers([PluginFileAnalyzerMathingRegex('codec-plugin',r'.*.codec-plugin.py')])
+        plugin_manager = PluginManager()
+        plugin_manager.setPluginLocator(locator,[pluginpath])
+        plugin_manager.collectPlugins()
+        ctx.obj['plugin_manager'] = plugin_manager
 
 
 @kafka_client.command()
@@ -171,9 +183,16 @@ def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, sea
 
                     m = m + 1
 
+                    decoded_payload = None
+                    if 'plugin_manager' in ctx.obj:
+                        for plugin in ctx.obj['plugin_manager'].getAllPlugins():
+                            decoded_payload = plugin.plugin_object.decode(msg.value, topic.topic)
+                            if decoded_payload:
+                                break
+
                     dt = datetime.datetime.fromtimestamp(msg.timestamp//1000).replace(microsecond=msg.timestamp % 1000*1000).astimezone().isoformat()
                     if not quiet:
-                        print("%s %s(%d)%d [%s] %s:%s" % (dt, topic.topic, topic.partition, msg.offset, headers_oneline, msg.key, msg.value))
+                        print("%s %s(%d)%d [%s] %s:%s%s" % (dt, topic.topic, topic.partition, msg.offset, headers_oneline, msg.key, msg.value, decoded_payload and " = "+str(decoded_payload) or ""))
 
                     if writefilepath:
                         basefilename = os.path.join(writefilepath, "%s.%05i" % (topic.topic,n))
@@ -184,6 +203,9 @@ def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, sea
                             f.write(msg.key)
                         with open(basefilename + '.header', 'w') as f:
                             f.write(headers)
+                        if decoded_payload:
+                            with open(basefilename + '.json', 'w') as f:
+                                f.write(json.dumps(decoded_payload, indent=4, sort_keys=True, default=str))
 
     if key or searchpayload or searchheader:
         print(f"# filtered {m} of {n} received messages")
