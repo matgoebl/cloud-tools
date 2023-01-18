@@ -61,6 +61,33 @@ avrosend:
 avrorecv:
 	pipenv run kafka-client.py -I $(SRC) -v recv -t demo -c 1 -w .
 
+
+kinesis-demo:
+	aws sts get-caller-identity --query Arn --output text --no-cli-pager
+	-make kinesis-demo-stream kinesis-demo-client
+	sleep 5
+	make kinesis-demo-cleanup
+
+kinesis-demo-cleanup:
+	aws kinesis delete-stream --stream-name TestStream --output text --no-cli-pager
+	aws kinesis delete-stream --stream-name TestStream2 --output text --no-cli-pager
+
+kinesis-demo-stream:
+	make kinesis-demo-cleanup || true
+	sleep 5
+	aws kinesis create-stream --stream-name TestStream --shard-count 1 --output json  --no-cli-pager
+	aws kinesis create-stream --stream-name TestStream2 --shard-count 1 --output json  --no-cli-pager
+	sleep 5
+	aws kinesis list-streams --output json --no-cli-pager
+	aws kinesis describe-stream-summary --stream-name TestStream --output json --no-cli-pager
+	aws kinesis put-record --stream-name TestStream --partition-key TEST-KEY1 --data 'Hello World!' --cli-binary-format raw-in-base64-out --output json --no-cli-pager
+	aws kinesis get-records --shard-iterator `aws kinesis get-shard-iterator --shard-id shardId-000000000000 --shard-iterator-type TRIM_HORIZON --stream-name TestStream --query 'ShardIterator'` --output json | jq -r '.Records[].Data' | while read data; do echo "$$data" | base64 --decode; echo; done
+
+kinesis-demo-client:
+	pipenv run kinesis-client.py send -t TestStream -k TEST-KEY2 -p 'Hello World :-)'
+	pipenv run kinesis-client.py recv -t TestStream -j -60 -c 10
+
+
 cloud-tools-deploy:
 	../cloud-tools-deploy.sh
 

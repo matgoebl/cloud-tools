@@ -15,6 +15,7 @@ jsonpath-ng = "*"
 aws-kinesis-agg = "*"
 aws-glue-schema-registry = "*"
 yapsy = "*"
+offspring = "*"
 
 [dev-packages]
 
