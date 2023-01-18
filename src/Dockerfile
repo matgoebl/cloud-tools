@@ -12,7 +12,8 @@ RUN curl -O https://downloads.apache.org/kafka/3.3.1/kafka_$KAFKA_VERSION.tgz &&
 FROM docker.io/python:3.9-bullseye
 ARG KAFKA_VERSION
 RUN apt-get update && apt-get -y upgrade
-RUN apt install -y curl jq less joe iputils-ping traceroute mtr netcat socat nmap strace dnsutils openssl redir iproute2 kubernetes-client awscli microsocks tinyproxy default-jre-headless
+RUN apt install -y curl jq less joe iputils-ping traceroute mtr netcat socat nmap strace dnsutils openssl redir iproute2 kubernetes-client microsocks tinyproxy default-jre-headless
+RUN mkdir awscli && cd awscli && curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip && unzip awscliv2.zip && ./aws/install && cd .. && rm -rf awscli
 
 RUN adduser --uid 1000 --home /app --no-create-home --disabled-password --gecos User --shell /bin/sh user
 COPY --from=builder /app/.venv/ /app/.venv/
