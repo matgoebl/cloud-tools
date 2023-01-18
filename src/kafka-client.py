@@ -5,12 +5,15 @@ import os
 import sys
 import re
 import datetime
+import dateutil.relativedelta
 import logging
 import ssl
 import math
 import json
 from yapsy.PluginManager import PluginManager, IPluginLocator
 from yapsy.PluginFileLocator import PluginFileLocator, PluginFileAnalyzerMathingRegex
+
+timeout_secs = 1
 
 @click.group()
 @click.option('-b', '--bootstrap', help='Kafka bootstrap server.', default='localhost:9093', show_default=True)
@@ -113,7 +116,7 @@ def send(ctx, topic, key, headers, payload, headersfile, payloadfile):
 @click.option('-t', '--topic',         help='Topic to receive from.', required=True)
 @click.option('-c', '--count',         help='Number of messages to receive (will be rounded to multiple of partitions).', type=int, default=1, show_default=True)
 @click.option('-f', '--follow',        help='Wait for new messages.', is_flag=True)
-@click.option('-j', '--jump',          help='Jump to given date and time.')
+@click.option('-j', '--jump',          help='Jump to given date and time, e.g. "2023-01-18 22:04:10". A single negative number will seek back the given number of seconds, e.g. "-60" will start a minute ago.')
 @click.option('-w', '--writefilepath', help='Write messages (.data), headers (.header) and keys (.key) to files named <topic>.<number> at the given path (e.g. "."). The header may contain string dumps, that cannot be transparently sent again via "send" command.')
 @click.option('-k', '--key',           help='Filter for messages with the given key.')
 @click.option('-s', '--searchpayload', help='Filter for message whose payload matches the given regex.')
@@ -128,7 +131,11 @@ def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, sea
     consumer.assign(topicpartitions)
     offsets = consumer.end_offsets(topicpartitions)
     if jump:
-        ts = int( datetime.datetime.fromisoformat(jump).timestamp() * 1000 )
+        if jump[0] == '-':
+            jump_time = datetime.datetime.now() - dateutil.relativedelta.relativedelta(seconds=int(jump[1:]))
+        else:
+            jump_time = datetime.datetime.fromisoformat(jump)
+        ts = int( jump_time.timestamp() * 1000 )
 
     num_partitions = len(topicpartitions)
     count_per_partition = math.ceil(count / num_partitions)
@@ -137,7 +144,10 @@ def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, sea
     for topicpartition in topicpartitions:
         end_offset = offsets.get(topicpartition)
         if jump:
-            seek_offset = consumer.offsets_for_times({topicpartition: ts})[topicpartition].offset
+            seek_result = consumer.offsets_for_times({topicpartition: ts})[topicpartition]
+            if not seek_result:
+                return
+            seek_offset = seek_result.offset
         else:
             seek_offset = end_offset - count_per_partition
             if seek_offset < 0:
@@ -151,7 +161,7 @@ def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, sea
     n = 0
     m = 0
     while n < count or follow:
-        topic_msgs = consumer.poll(timeout_ms=1000)
+        topic_msgs = consumer.poll(timeout_ms=timeout_secs*1000)
         if len(topic_msgs) == 0 and not follow:
             break
         for topic, msgs in topic_msgs.items():
@@ -190,7 +200,7 @@ def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, sea
                             if decoded_payload:
                                 break
 
-                    dt = datetime.datetime.fromtimestamp(msg.timestamp//1000).replace(microsecond=msg.timestamp % 1000*1000).astimezone().isoformat()
+                    dt = datetime.datetime.fromtimestamp(msg.timestamp//1000).replace(microsecond=0).astimezone().isoformat()
                     if not quiet:
                         print("%s %s(%d)%d [%s] %s:%s%s" % (dt, topic.topic, topic.partition, msg.offset, headers_oneline, msg.key, msg.value, decoded_payload and " = "+str(decoded_payload) or ""))
 
