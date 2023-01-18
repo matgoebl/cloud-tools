@@ -10,7 +10,7 @@ import os
 import sys
 import re
 import datetime
-import dateutil
+import dateutil.relativedelta
 import time
 import logging
 import ssl
@@ -18,6 +18,8 @@ import math
 import json
 from yapsy.PluginManager import PluginManager, IPluginLocator
 from yapsy.PluginFileLocator import PluginFileLocator, PluginFileAnalyzerMathingRegex
+
+timeout_secs = 1
 
 @click.group()
 @click.option('-v', '--verbose',  count=True)
@@ -57,10 +59,10 @@ def send(ctx, topic, key, payload, payloadfile):
     else:
         payload = payload.encode('utf-8')
 
-    producer = KinesisProducer(stream_name=topic, buffer_time=0.5, max_count=1)
+    producer = KinesisProducer(stream_name=topic, buffer_time=0.25, max_count=1)
     logging.debug(f"Sending message: {key}={payload}")
     producer.put(partition_key=key, data=payload)
-    time.sleep(1)
+    time.sleep(timeout_secs)
     producer.async_producer.process.terminate()
 
 
@@ -140,7 +142,7 @@ def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, qui
 
 def reset_timeout():
     signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(1)
+    signal.alarm(timeout_secs)
 
 def timeout_handler(signum, stack):
     raise KeyboardInterrupt
