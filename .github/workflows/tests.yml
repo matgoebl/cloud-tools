@@ -1,0 +1,43 @@
+name: Run Tests
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - '*'
+    tags:
+      - '*'
+
+env:
+  KAFKA_CLIENT_BOOTSTRAP: localhost:9092
+  PIPENV_VENV_IN_PROJECT: 1
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Start Bitname Kafka
+        uses: CandisIO/kafka-actions@v0.0.1
+        with:
+          kafka version: 3.2.0
+          zookeeper version: 3.7.1
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Setup Python Environment
+        run: make -C src setup
+
+      - name: Run Tests
+        shell: bash
+        run: cd demo && ./tests.sh --with-setup-env

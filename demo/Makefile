@@ -1,7 +1,7 @@
 export NAMESPACE=kafka-test
 export IMAGEURL=ghcr.io/matgoebl/cloud-tools:latest
 SRC=$(PWD)/../src
-all: install forward list send recv forward-kill
+all: install forward tests forward-kill
 
 install:
 	@echo -n "Installing on Cluster: "
@@ -21,8 +21,10 @@ export KAFKA_CLIENT_DNSMAP=$(KAFKA_CLIENT_BOOTSTRAP)=localhost:9093
 export KAFKA_CLIENT_INSECURE=true
 export KAFKA_CLIENT_USERNAME=demo-user
 export KAFKA_CLIENT_PASSWORD=$(shell kubectl --namespace $(NAMESPACE) get secret/$(KAFKA_CLIENT_USERNAME) -o json | jq .data.password -r | base64 -d)
-export ENV PIPENV_VENV_IN_PROJECT=1
+export PIPENV_VENV_IN_PROJECT=1
+export PIPENV_PIPFILE=$(SRC)/Pipfile
 export PATH:=$(SRC):$(PATH)
+export APP:=$(SRC)
 
 forward:
 	@echo "Forward bootstrap server and broker ports..."
@@ -32,48 +34,8 @@ forward:
 forward-kill:
 	pkill -e -f "^kubectl port-forward --namespace $(NAMESPACE)"
 
-list:
-	pipenv run kafka-client.py list
-
-send:
-	pipenv run kafka-client.py send -t demo-topic -k TEST-KEY -h 'abc:123;xyz:987' -p 'Hello World!'
-
-recv:
-	pipenv run kafka-client.py recv -t demo-topic -c 3
-
-sh:
-	pipenv shell
-
-
-AVRO_TOOLS=java -jar $(SRC)/.venv/avro-tools-1.11.1.jar
-avro-demo:
-	$(AVRO_TOOLS) idl2schemata ./demo.avdl ./
-	$(AVRO_TOOLS) fromjson --schema-file demo.avsc demo.json > tmp_demo.avro
-	$(AVRO_TOOLS) tojson tmp_demo.avro
-	pipenv run avro-tool.py -s demo.avsc dump
-	pipenv run avro-tool.py -s demo.avsc enc -i demo.json -o tmp_demo_schemaless.avro
-	xxd tmp_demo_schemaless.avro
-	pipenv run avro-tool.py -s demo.avsc dec -i tmp_demo_schemaless.avro
-
-avrosend:
-	pipenv run kafka-client.py send -t demo -P tmp_demo_schemaless.avro
-
-avrorecv:
-	pipenv run kafka-client.py -I $(SRC) recv -t demo -c 1 -w .
-
-avroglue:
-	@echo 'Test uncompressed:'
-	(echo 03 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 02 | xxd -r -p; cat tmp_demo_schemaless.avro ) > tmp_demo_schemaless_glueenc.avro
-	xxd tmp_demo_schemaless_glueenc.avro
-	cp demo.avsc demo.00000000-0000-0001-0000-000000000002.avsc
-	pipenv run kafka-client.py send -t demo -P tmp_demo_schemaless_glueenc.avro
-	pipenv run kafka-client.py -I $(SRC) recv -t demo -c 1 -w .
-
-	@echo 'Test compressed:'
-	(echo 03 05 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 02 | xxd -r -p; pigz -z < tmp_demo_schemaless.avro ) > tmp_demo_schemaless_glueenczip.avro
-	xxd tmp_demo_schemaless_glueenczip.avro
-	pipenv run kafka-client.py send -t demo -P tmp_demo_schemaless_glueenczip.avro
-	pipenv run kafka-client.py -I $(SRC) recv -t demo -c 1 -w .
+tests:
+	./tests.sh --with-setup-env
 
 
 kinesis-demo:
@@ -83,8 +45,8 @@ kinesis-demo:
 	make kinesis-demo-cleanup
 
 kinesis-demo-cleanup:
-	aws kinesis delete-stream --stream-name TestStream --output text --no-cli-pager
-	aws kinesis delete-stream --stream-name TestStream2 --output text --no-cli-pager
+	-aws kinesis delete-stream --stream-name TestStream --output text --no-cli-pager
+	-aws kinesis delete-stream --stream-name TestStream2 --output text --no-cli-pager
 
 kinesis-demo-stream:
 	make kinesis-demo-cleanup || true
@@ -107,7 +69,7 @@ cloud-tools-deploy: cloud-tools-destroy
 	CLOUD_TOOLS_KAFKA_CLIENT_INSECURE=$(KAFKA_CLIENT_INSECURE) \
 	CLOUD_TOOLS_KAFKA_CLIENT_USERNAME=$(KAFKA_CLIENT_USERNAME) \
 	CLOUD_TOOLS_KAFKA_CLIENT_PASSWORD=$(KAFKA_CLIENT_PASSWORD) \
-	../cloud-tools-deploy.sh -i .
+	../cloud-tools-deploy.sh
 
 cloud-tools-destroy:
 	-../cloud-tools-deploy.sh -d
