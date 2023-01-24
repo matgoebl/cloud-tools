@@ -12,8 +12,12 @@ RUN curl -O https://downloads.apache.org/kafka/3.3.1/kafka_$KAFKA_VERSION.tgz &&
 FROM docker.io/python:3.9-bullseye
 ARG KAFKA_VERSION
 RUN apt-get update && apt-get -y upgrade
-RUN apt install -y curl jq less joe iputils-ping traceroute mtr netcat socat nmap strace dnsutils openssl redir iproute2 kubernetes-client microsocks tinyproxy default-jre-headless
+RUN apt install -y curl jq less joe hexcurse iputils-ping traceroute mtr netcat socat nmap strace dnsutils openssl redir iproute2 kubernetes-client microsocks tinyproxy default-jre-headless
 RUN mkdir awscli && cd awscli && curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip && unzip awscliv2.zip && ./aws/install && cd .. && rm -rf awscli
+
+RUN echo "deb http://repo.mongodb.org/apt/debian bullseye/mongodb-org/5.0 main" > /etc/apt/sources.list.d/mongodb-org-5.0.list && \
+    curl -sSL https://www.mongodb.org/static/pgp/server-5.0.asc | apt-key add - && \
+    apt update && apt install -y mongodb-org
 
 RUN adduser --uid 1000 --home /app --no-create-home --disabled-password --gecos User --shell /bin/sh user
 COPY --from=builder /app/.venv/ /app/.venv/

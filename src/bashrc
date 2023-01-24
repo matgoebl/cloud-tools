@@ -3,4 +3,8 @@ export PATH=$PATH:/app:/app/kafka/bin
 PS1='\u@\h:\w\$ '
 echo 'Welcome to Cloud Tools -- https://github.com/matgoebl/cloud-tools'
 echo
-cd /data/
+if [ -d /data/ ]; then
+ cd /data/
+else
+ cd /tmp/
+fi
