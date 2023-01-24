@@ -104,6 +104,9 @@ spec:
           postStart:
             exec:
               command: ["mkdir", "-p", "/data/in", "/data/out"]
+        volumeMounts:
+        - name: data
+          mountPath: "/data"
         env:
         - name: KAFKA_CLIENT_BOOTSTRAP
           value: "${KAFKA_CLIENT_BOOTSTRAP:-}"
@@ -119,11 +122,14 @@ spec:
           value: "${AWS_ACCESS_KEY_ID:-}"
         - name: AWS_SECRET_ACCESS_KEY
           value: "${AWS_SECRET_ACCESS_KEY:-}"
-        volumeMounts:
-        - name: data
-          mountPath: "/data"
-        command:$PROXYCMD
 __X__
+
+ for var in ${!CLOUD_TOOLS_*};do
+  echo "        - name: $var"
+  echo "          value: \"${!var}\""
+ done
+
+ echo "        command:$PROXYCMD"
  if [ -n "$SCRIPT" ]; then
   (
    echo '        - /bin/bash'
