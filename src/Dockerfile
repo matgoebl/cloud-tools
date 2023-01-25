@@ -1,4 +1,4 @@
-ARG KAFKA_VERSION=2.12-3.3.1
+ARG KAFKA_VERSION=2.13-3.3.2
 
 FROM docker.io/python:3.9-bullseye AS builder
 ARG KAFKA_VERSION
@@ -7,7 +7,7 @@ ENV PIPENV_VENV_IN_PROJECT=1
 ADD Pipfile.lock Pipfile /app/
 WORKDIR /app
 RUN pipenv sync
-RUN curl -O https://downloads.apache.org/kafka/3.3.1/kafka_$KAFKA_VERSION.tgz && tar -xzf kafka_$KAFKA_VERSION.tgz
+RUN curl -O https://archive.apache.org/dist/kafka/3.3.2/kafka_$KAFKA_VERSION.tgz && tar -xzf kafka_$KAFKA_VERSION.tgz
 
 FROM docker.io/python:3.9-bullseye
 ARG KAFKA_VERSION
