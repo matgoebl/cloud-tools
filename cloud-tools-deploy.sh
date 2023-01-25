@@ -14,6 +14,8 @@ OUTDIR=""
 [ -z "${PROXYCMD:-}" ] && PROXYCMD=' ["/usr/bin/microsocks"]'
 SCRIPT=''
 
+export CLOUD_TOOLS_ARG=''
+
 usage ()
 {
  echo "usage: $0 [OPTS] [ARGS]"
@@ -25,10 +27,12 @@ usage ()
  echo "- KAFKA_CLIENT_PASSWORD"
  echo "- KAFKA_CLIENT_INSECURE"
  echo
+ echo "A file cloud-settings.sh is sourced if found."
+ echo
 }
 
 OP="deploy"
-while getopts dfpse:i:o:n:h opt; do
+while getopts dfpsce:i:o:n:e:a:h opt; do
  case "$opt" in
    d)#  Destroy deployment
       OP="destroy"
@@ -50,12 +54,18 @@ while getopts dfpse:i:o:n:h opt; do
       SCRIPT="$OPTARG"
       OP="script"
       ;;
+   c)#  Connect to a running instance, without deployment
+      OP="connect"
+      ;;
    o)#DIR  Download /data/out/ to directory DIR, after executing the pod shell (default 'out/', if existing)
       OUTDIR="$OPTARG"
       mkdir -p "$OUTDIR"
       ;;
    n)#NAMESPACE  Set namespace (default is 'default')
       NAMESPACE="$OPTARG"
+      ;;
+   a)#ARG  Set CLOUD_TOOLS_ARG (can be used in cloud-settings.sh and on target)
+      CLOUD_TOOLS_ARG="$OPTARG"
       ;;
    h)#  Show help
       usage; exit 0 ;;
@@ -66,12 +76,16 @@ done
 shift $(($OPTIND - 1))
 
 
+[ -e cloud-settings.sh ] && source cloud-settings.sh
+
+
 if [ "$OP" = "destroy" ]; then
  kubectl --namespace $NAMESPACE delete job/$IDENTIFIER || true
  exit 0
 fi
 
 
+if [ "$OP" != "connect" ]; then
 (
  cat <<__X__
 apiVersion: batch/v1
@@ -79,7 +93,7 @@ kind: Job
 metadata:
   name: $IDENTIFIER
 spec:
-  activeDeadlineSeconds: 57600
+  activeDeadlineSeconds: 43200
   ttlSecondsAfterFinished: 600
   template:
     spec:
@@ -139,15 +153,15 @@ __X__
   )
  fi
 ) | kubectl --namespace $NAMESPACE apply -f -
+fi
 
 
-
-echo -n "Waiting for pod '$IDENTIFIER': "
+echo -n "Waiting for latest pod '$IDENTIFIER-*': "
 pod=""
 while [ -z "$pod" ]; do
  echo -n .
  sleep 1
- read namespace pod < <( kubectl get pods --all-namespaces --sort-by=.metadata.creationTimestamp | sed -ne 's/^\('"$NAMESPACE"'\)  *\('"$IDENTIFIER"'[^ ]*\) .*Running.*$/\1 \2/p' | tail -n 1; echo)
+ read namespace pod < <( kubectl get pods --all-namespaces --sort-by=.metadata.creationTimestamp | sed -ne 's/^\('"$NAMESPACE"'\)  *\('"$IDENTIFIER-"'[^ ]*\) .*Running.*$/\1 \2/p' | tail -n 1; echo)
 done
 echo
 
