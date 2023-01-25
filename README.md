@@ -100,6 +100,14 @@ You can upload, execute and watch the output of a shell script:
     ./cloud-tools-deploy.sh -e test.sh
 
 
+## Extensibility
+
+- All local environment variables beginning with CLOUD_TOOLS_ will be passed into the deployment.
+- If there is a local file `cloud-settings.sh`, it will be sourced. Its purpose is to set up CLOUD_TOOLS_* environment.
+ - The option `-a` sets the environment variable CLOUD_TOOLS_ARG, that can be used in `cloud-settings.sh` and the deployment.
+ - A file `./in/cloud.bashrc` will be uploaded (along with `./in/*`) and sourced after pod shell login.
+
+
 ## Kafka kafka send/receive and AVRO encode/decode on a pod
 
 ### Set server and credentials
