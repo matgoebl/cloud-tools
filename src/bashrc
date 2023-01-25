@@ -1,4 +1,4 @@
-export PATH=$PATH:/app:/app/kafka/bin
+export PATH=$PATH:/app:/app/kafka/bin:/data/in:/tmp/in
 . .venv/bin/activate
 PS1='\u@\h:\w\$ '
 echo 'Welcome to Cloud Tools -- https://github.com/matgoebl/cloud-tools'
@@ -9,4 +9,3 @@ else
  cd /tmp/
 fi
 [ -e ./in/cloud.bashrc ] && source ./in/cloud.bashrc
-
