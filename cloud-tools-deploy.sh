@@ -130,12 +130,6 @@ spec:
           value: "${KAFKA_CLIENT_PASSWORD:-}"
         - name: KAFKA_CLIENT_INSECURE
           value: "${KAFKA_CLIENT_INSECURE:-false}"
-        - name: AWS_DEFAULT_REGION
-          value: "${AWS_DEFAULT_REGION:-}"
-        - name: AWS_ACCESS_KEY_ID
-          value: "${AWS_ACCESS_KEY_ID:-}"
-        - name: AWS_SECRET_ACCESS_KEY
-          value: "${AWS_SECRET_ACCESS_KEY:-}"
 __X__
 
  for var in ${!CLOUD_TOOLS_*};do

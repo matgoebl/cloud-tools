@@ -108,6 +108,24 @@ You can upload, execute and watch the output of a shell script:
  - A file `./in/cloud.bashrc` will be uploaded (along with `./in/*`) and sourced after pod shell login.
 
 
+## Passing AWS Credentials
+
+For using AWS services in EKS you may use a service account that is annotated with an IAM role.
+
+Alternatively just get AWS credentials for the role you want to assume in `cloud-settings.sh` like this:
+
+    export $(printf "CLOUD_TOOLS_AWS_ACCESS_KEY_ID=%s CLOUD_TOOLS_AWS_SECRET_ACCESS_KEY=%s CLOUD_TOOLS_AWS_SESSION_TOKEN=%s" $(aws sts assume-role --profile some-profile --role-arn arn:aws:iam::123456789012:role/some_role --role-session-name CloudToolsSession --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" --output text))
+
+    export CLOUD_TOOLS_AWS_DEFAULT_REGION=eu-central-1
+
+Then in `./in/cloud.bashrc`:
+
+    export AWS_DEFAULT_REGION=$CLOUD_TOOLS_AWS_DEFAULT_REGION
+    export AWS_ACCESS_KEY_ID=$CLOUD_TOOLS_AWS_ACCESS_KEY_ID 
+    export AWS_SECRET_ACCESS_KEY=$CLOUD_TOOLS_AWS_SECRET_ACCESS_KEY 
+    export AWS_SESSION_TOKEN=$CLOUD_TOOLS_AWS_SESSION_TOKEN
+
+
 ## Kafka kafka send/receive and AVRO encode/decode on a pod
 
 ### Set server and credentials
