@@ -61,6 +61,20 @@ avrosend:
 avrorecv:
 	pipenv run kafka-client.py -I $(SRC) -v recv -t demo -c 1 -w .
 
+avroglue:
+	@echo 'Test uncompressed:'
+	(echo 03 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 02 | xxd -r -p; cat tmp_demo_schemaless.avro ) > tmp_demo_schemaless_glueenc.avro
+	hexdump -C tmp_demo_schemaless_glueenc.avro
+	cp demo.avsc demo.00000000-0000-0001-0000-000000000002.avsc
+	pipenv run kafka-client.py send -t demo -P tmp_demo_schemaless_glueenc.avro
+	pipenv run kafka-client.py -I $(SRC) recv -t demo -c 1 -w .
+
+	@echo 'Test compressed:'
+	(echo 03 05 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 02 | xxd -r -p; pigz -z < tmp_demo_schemaless.avro ) > tmp_demo_schemaless_glueenczip.avro
+	hexdump -C tmp_demo_schemaless_glueenczip.avro
+	pipenv run kafka-client.py send -t demo -P tmp_demo_schemaless_glueenczip.avro
+	pipenv run kafka-client.py -I $(SRC) recv -t demo -c 1 -w .
+
 
 kinesis-demo:
 	aws sts get-caller-identity --query Arn --output text --no-cli-pager
