@@ -26,11 +26,11 @@ class AvroPlugin(IPlugin):
         # the constants can be found here: https://github.com/awslabs/aws-glue-schema-registry/blob/master/common/src/main/java/com/amazonaws/services/schemaregistry/utils/AWSSchemaRegistryConstants.java
         # inspired also from: https://github.com/DisasterAWARE/aws-glue-schema-registry-python/blob/main/src/aws_schema_registry/codec.py
         header_version_byte = int(raw_payload[0])
-        compression_type_byte = int(raw_payload[1])
-        schema_version_id = str(uuid.UUID(bytes=raw_payload[2:18]))
         HEADER_VERSION_GLUE = 3
-        COMPRESSION_TYPE_ZLIB = 5
-        if header_version_byte == HEADER_VERSION_GLUE:
+        if header_version_byte == HEADER_VERSION_GLUE and len(raw_payload) > 18:
+            compression_type_byte = int(raw_payload[1])
+            COMPRESSION_TYPE_ZLIB = 5
+            schema_version_id = str(uuid.UUID(bytes=raw_payload[2:18]))
             if compression_type_byte == COMPRESSION_TYPE_ZLIB:
                 raw_payload = zlib.decompress(raw_payload[18:])
             else:
