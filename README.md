@@ -42,10 +42,10 @@ Get help:
     -h   Show help
 
     The following environment variables should be set when using kafka-client.py:
-    - KAFKA_CLIENT_BOOTSTRAP
-    - KAFKA_CLIENT_USERNAME
-    - KAFKA_CLIENT_PASSWORD
-    - KAFKA_CLIENT_INSECURE
+    - CLOUD_TOOLS_KAFKA_CLIENT_BOOTSTRAP
+    - CLOUD_TOOLS_KAFKA_CLIENT_USERNAME
+    - CLOUD_TOOLS_KAFKA_CLIENT_PASSWORD
+    - CLOUD_TOOLS_KAFKA_CLIENT_INSECURE
 
 
 ## Error '...field is immutable'
@@ -102,7 +102,8 @@ You can upload, execute and watch the output of a shell script:
 
 ## Extensibility
 
-- All local environment variables beginning with CLOUD_TOOLS_ will be passed into the deployment.
+- All local environment variables beginning with `CLOUD_TOOLS_` will be passed into the deployment with the prefix `CLOUD_TOOLS_` removed,
+  e.g. `CLOUD_TOOLS_AWS_DEFAULT_REGION` will be passed as `AWS_DEFAULT_REGION`.
 - If there is a local file `cloud-settings.sh`, it will be sourced. Its purpose is to set up CLOUD_TOOLS_* environment.
  - The option `-a` sets the environment variable CLOUD_TOOLS_ARG, that can be used in `cloud-settings.sh` and the deployment.
  - A file `./in/cloud.bashrc` will be uploaded (along with `./in/*`) and sourced after pod shell login.
@@ -117,13 +118,6 @@ Alternatively just get AWS credentials for the role you want to assume in `cloud
     export $(printf "CLOUD_TOOLS_AWS_ACCESS_KEY_ID=%s CLOUD_TOOLS_AWS_SECRET_ACCESS_KEY=%s CLOUD_TOOLS_AWS_SESSION_TOKEN=%s" $(aws sts assume-role --profile some-profile --role-arn arn:aws:iam::123456789012:role/some_role --role-session-name CloudToolsSession --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" --output text))
 
     export CLOUD_TOOLS_AWS_DEFAULT_REGION=eu-central-1
-
-Then in `./in/cloud.bashrc`:
-
-    export AWS_DEFAULT_REGION=$CLOUD_TOOLS_AWS_DEFAULT_REGION
-    export AWS_ACCESS_KEY_ID=$CLOUD_TOOLS_AWS_ACCESS_KEY_ID 
-    export AWS_SECRET_ACCESS_KEY=$CLOUD_TOOLS_AWS_SECRET_ACCESS_KEY 
-    export AWS_SESSION_TOKEN=$CLOUD_TOOLS_AWS_SESSION_TOKEN
 
 
 ## Kafka kafka send/receive and AVRO encode/decode on a pod

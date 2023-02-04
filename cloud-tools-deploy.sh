@@ -22,10 +22,10 @@ usage ()
  sed -n 's/^   \(.\))#\(.*\)$/ -\1 \2/p' < $0
  echo
  echo "The following environment variables should be set when using kafka-client.py:"
- echo "- KAFKA_CLIENT_BOOTSTRAP"
- echo "- KAFKA_CLIENT_USERNAME"
- echo "- KAFKA_CLIENT_PASSWORD"
- echo "- KAFKA_CLIENT_INSECURE"
+ echo "- CLOUD_TOOLS_KAFKA_CLIENT_BOOTSTRAP"
+ echo "- CLOUD_TOOLS_KAFKA_CLIENT_USERNAME"
+ echo "- CLOUD_TOOLS_KAFKA_CLIENT_PASSWORD"
+ echo "- CLOUD_TOOLS_KAFKA_CLIENT_INSECURE"
  echo
  echo "A file cloud-settings.sh is sourced if found."
  echo
@@ -122,18 +122,10 @@ spec:
         - name: data
           mountPath: "/data"
         env:
-        - name: KAFKA_CLIENT_BOOTSTRAP
-          value: "${KAFKA_CLIENT_BOOTSTRAP:-}"
-        - name: KAFKA_CLIENT_USERNAME
-          value: "${KAFKA_CLIENT_USERNAME:-}"
-        - name: KAFKA_CLIENT_PASSWORD
-          value: "${KAFKA_CLIENT_PASSWORD:-}"
-        - name: KAFKA_CLIENT_INSECURE
-          value: "${KAFKA_CLIENT_INSECURE:-false}"
 __X__
 
  for var in ${!CLOUD_TOOLS_*};do
-  echo "        - name: $var"
+  echo "        - name: ${var##CLOUD_TOOLS_}"
   echo "          value: \"${!var}\""
  done
 

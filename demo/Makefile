@@ -103,6 +103,9 @@ kinesis-demo-client:
 
 
 cloud-tools-deploy:
+	CLOUD_TOOLS_KAFKA_CLIENT_BOOTSTRAP=$(KAFKA_CLIENT_BOOTSTRAP) \
+	CLOUD_TOOLS_KAFKA_CLIENT_USERNAME=$(KAFKA_CLIENT_USERNAME) \
+	CLOUD_TOOLS_KAFKA_CLIENT_PASSWORD=$(KAFKA_CLIENT_PASSWORD) \
 	../cloud-tools-deploy.sh
 
 cloud-tools-destroy:
