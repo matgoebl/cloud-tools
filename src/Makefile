@@ -5,6 +5,8 @@ VENV=.venv
 
 all: image
 
+setup: $(VENV)
+
 $(VENV):
 	python3 -m pip install --user virtualenv pipenv
 	pipenv install
