@@ -186,12 +186,18 @@ def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, sea
                         if extractheader and k == extractheader:
                             print(f"{k}:{v}")
 
+                    if extractheader == '':
+                        print(msg.key.decode('utf-8', 'ignore'))
+
                     headers_oneline = headers.removesuffix('\n').replace('\n',';')
 
                     if searchheader and not re.search('^'+searchheader+'$', headers, flags=re.IGNORECASE|re.MULTILINE):
                         continue
 
                     m = m + 1
+
+                    if quiet and not writefilepath:
+                        continue
 
                     decoded_payload = None
                     if 'plugin_manager' in ctx.obj:

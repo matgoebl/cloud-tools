@@ -15,7 +15,8 @@ echo '*** Test send:'
 kafka-client.py send -t demo-topic -k TEST-KEY -h 'abc:123;xyz:987' -p 'Hello World!'
 
 echo '*** Test recv:'
-kafka-client.py recv -t demo-topic -c 3
+kafka-client.py recv -t demo-topic -c 3 | grep Hello
+kafka-client.py recv -t demo-topic -c 3 -X '' -q | grep TEST-KEY
 
 echo '*** Test avro-tool:'
 avro-tools.sh idl2schemata ./demo.avdl ./
@@ -31,7 +32,7 @@ echo '*** Test avrosend:'
 kafka-client.py send -t demo -P tmp_demo_schemaless.avro
 
 echo '*** Test avrorecv:'
-kafka-client.py -I ${APP:-/app} recv -t demo -c 1 -w .
+kafka-client.py -I ${APP:-/app} recv -t demo -c 1 -w . | grep "'hello': 'World!'"
 
 echo '*** Test avroglue uncompressed:'
 (echo 03 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 02 | xxd -r -p; cat tmp_demo_schemaless.avro ) > tmp_demo_schemaless_glueenc.avro
