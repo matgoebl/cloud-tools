@@ -10,6 +10,7 @@ import logging
 import ssl
 import math
 import json
+import ratelimiter
 from yapsy.PluginManager import PluginManager, IPluginLocator
 from yapsy.PluginFileLocator import PluginFileLocator, PluginFileAnalyzerMathingRegex
 
@@ -84,21 +85,18 @@ def list(ctx):
 
 @kafka_client.command()
 @click.option('-t', '--topic',       help='Topic to send to.', required=True)
-@click.option('-k', '--key',         help='Key to use for sending.', default='TEST', show_default=True)
+@click.option('-k', '--key',         help='Key to use for sending.', default='', show_default=True)
+@click.option('-K', '--keyfile',     help='Read key from file.', type=click.File('rb'))
 @click.option('-h', '--headers',     help='Header to set for every sent message, e.g. abc:123;xyz:987')
-@click.option('-p', '--payload',     help='Payload to send.', default='abc123', show_default=True)
+@click.option('-p', '--payload',     help='Payload to send.', default='', show_default=True)
 @click.option('-H', '--headersfile', help='Read headers from file.', type=click.File('r'))
 @click.option('-P', '--payloadfile', help='Read payload from file.', type=click.File('rb'))
+@click.option('-r', '--rate',        help='Rate limit in requests per second (default: almost no limit)', type=int, default=999999999999)
+@click.option('-m', '--multiline',   help='Read keys and payloads line-by-line from their files', is_flag=True)
+@click.option('-c', '--count',       help='Number of messages to send (ignored in multiline mode).', type=int, default=1, show_default=True)
 @click.pass_context
-def send(ctx, topic, key, headers, payload, headersfile, payloadfile):
+def send(ctx, topic, key, keyfile, headers, headersfile, payload, payloadfile, rate, multiline, count):
     """Send message."""
-    if payloadfile:
-        payload = payloadfile.read()
-    else:
-        payload = payload.encode('utf-8')
-    if headersfile:
-        headers = headersfile.read().rstrip('\n')
-
     headerlist = None
     if headers:
         headerlist = []
@@ -106,9 +104,41 @@ def send(ctx, topic, key, headers, payload, headersfile, payloadfile):
             k, v = header.split(':')
             headerlist.append((k,v.encode('utf-8')))
 
+    if not keyfile:
+        key=key.encode('utf-8')
+    elif not multiline:
+        key = keyfile.read().rstrip(b'\n')
+
+    if not payloadfile:
+        payload = payload.encode('utf-8')
+    elif not multiline:
+        payload = payloadfile.read()
+
+    if headersfile:
+        headers = headersfile.read().rstrip('\n')
+
     producer = KafkaProducer(**ctx.obj['producer_args'])
-    logging.debug(f"Sending message: {key}={payload} headers:{headerlist}")
-    producer.send(topic, key=key.encode('utf-8'), headers=headerlist, value=payload)
+
+    rate_limiter = ratelimiter.RateLimiter(max_calls=rate, period=1)
+
+    while count > 0:
+        with rate_limiter:
+            if multiline:
+                if payloadfile:
+                    payload = payloadfile.readline()
+                    if not payload:
+                        break
+                    payload = payload.rstrip(b'\n')
+                if keyfile:
+                    key = keyfile.readline()
+                    if not key:
+                        break
+                    key = key.rstrip(b'\n')
+            else:
+                count = count - 1
+            logging.info(f"Sending message: {key}={payload} headers:{headerlist}")
+            producer.send(topic, key=key, headers=headerlist, value=payload)
+
     producer.flush()
 
 
