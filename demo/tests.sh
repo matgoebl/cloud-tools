@@ -47,5 +47,8 @@ xxd tmp_demo_schemaless_glueenczip.avro
 kafka-client.py send -t demo -P tmp_demo_schemaless_glueenczip.avro
 kafka-client.py -I ${APP:-/app} recv -t demo -c 1 -w .
 
+echo '*** Test rate limited:'
+test `/usr/bin/time -f '%e' kafka-client.py send -t demo -c 6 -r 2 2>&1 | sed -e 's/\..*//'` -ge 2
+
 echo '*** Tests done.'
 rm -f tmp*

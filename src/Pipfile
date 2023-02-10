@@ -16,6 +16,7 @@ aws-kinesis-agg = "*"
 aws-glue-schema-registry = "*"
 yapsy = "*"
 offspring = "*"
+ratelimiter = "*"
 
 [dev-packages]
 

@@ -37,6 +37,9 @@ forward-kill:
 tests:
 	./tests.sh --with-setup-env
 
+sh:
+	pipenv shell
+
 
 kinesis-demo:
 	aws sts get-caller-identity --query Arn --output text --no-cli-pager
