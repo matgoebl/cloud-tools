@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+"""
+A simple kafka commandline client written in python.
+It sends and receives messages while optionally decoding them using plugins.
+
+Copyright (c) 2022 Matthias Goebl (matthias dot goebl at goebl dot net)
+
+Published under the Apache License Version 2.0
+
+For details see https://github.com/matgoebl/cloud-tools/
+"""
+
 from kafka import KafkaConsumer, TopicPartition, KafkaProducer
 import click
 import os
@@ -16,7 +27,7 @@ from yapsy.PluginFileLocator import PluginFileLocator, PluginFileAnalyzerMathing
 
 timeout_secs = 1
 
-@click.group()
+@click.group(help=__doc__)
 @click.option('-b', '--bootstrap', help='Kafka bootstrap server.', default='localhost:9093', show_default=True)
 @click.option('-v', '--verbose',  count=True)
 @click.option('-U', '--username', help='Kafka username.')
@@ -26,7 +37,6 @@ timeout_secs = 1
 @click.option('-I', '--pluginpath',    help='Load encoder/decoder plugins from given path.')
 @click.pass_context
 def kafka_client(ctx, bootstrap, username, password, insecure, dnsmap, pluginpath, verbose):
-    """Receive messages."""
     logging.basicConfig(level=logging.WARNING-10*verbose,handlers=[logging.StreamHandler()],format="[%(levelname)s] %(message)s")
     ctx.obj = {}
 
@@ -96,7 +106,7 @@ def list(ctx):
 @click.option('-c', '--count',       help='Number of messages to send (ignored in multiline mode).', type=int, default=1, show_default=True)
 @click.pass_context
 def send(ctx, topic, key, keyfile, headers, headersfile, payload, payloadfile, rate, multiline, count):
-    """Send message."""
+    """Send messages."""
     headerlist = None
     if headers:
         headerlist = []

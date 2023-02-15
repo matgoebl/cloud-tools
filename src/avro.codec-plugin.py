@@ -1,3 +1,13 @@
+"""
+This is an example plugin for kafka-client.py and kinesis-client.py to decode AVRO messages.
+
+Copyright (c) 2022 Matthias Goebl (matthias dot goebl at goebl dot net)
+
+Published under the Apache License Version 2.0
+
+For details see https://github.com/matgoebl/cloud-tools/
+"""
+
 from yapsy.IPlugin import IPlugin
 import os
 import logging

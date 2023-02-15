@@ -1,18 +1,18 @@
 # cloud-tools
-Some of my Cloud Tools, including kafka sender/receiver and AVRO encoder/decoder.
+Some of my Cloud Tools, including kafka&kinesis sender/receiver and AVRO encoder/decoder.
 
 (c) 2022 Copyright: Matthias Goebl  (e-mail: matthias dot goebl at goebl dot net)
 
 Published under the Apache License 2.0.
 
-https://github.com/matgoebl/cloud-tools/
+For details see https://github.com/matgoebl/cloud-tools/
 
 [![Create and Publish Docker Image to ghcr.io](https://github.com/matgoebl/cloud-tools/actions/workflows/publish.yml/badge.svg)](https://github.com/matgoebl/cloud-tools/actions/workflows/publish.yml)
 
 
 ## Quickstart
 
-Deploy the latest tools container to your default cluster (`kubectl cluster-info`):
+Deploy the latest cloud-tools container to your default cluster (check with `kubectl cluster-info`):
 
     ./cloud-tools-deploy.sh
 
@@ -24,7 +24,7 @@ After the container is deployed, you will get a shell on it. There you can issue
     $ curl -ki https://kubernetes.default.svc.cluster.local
     HTTP/1.1 401 Unauthorized
 
-(i.e. connectivity works, 401 because we did not provide a token)  
+(i.e. connectivity works, but we get an error 401 because we did not provide a token)  
 The pod is deployed as job, that will be removed after 16 hours.  
 To manually remove the pod use:
 
@@ -34,11 +34,17 @@ Get help:
 
     $ ./cloud-tools-deploy.sh -h
     usage: ./cloud-tools-deploy.sh [OPTS] [ARGS]
+
     -d   Destroy deployment
-    -f   Run only port-forwarding to socks5 server
+    -f   Run only port-forwarding to proxy
+    -p   Run http(s) proxy as proxy
+    -s   Run socks5 server as proxy
     -i DIR  Upload directory DIR to /data/, before executing the pod shell (default 'in/', if existing)
+    -e SCRIPT  Execute given shell script
+    -c   Connect to a running instance, without deployment
     -o DIR  Download /data/out/ to directory DIR, after executing the pod shell (default 'out/', if existing)
     -n NAMESPACE  Set namespace (default is 'default')
+    -a ARG  Set CLOUD_TOOLS_ARG (can be used in cloud-settings.sh and on target)
     -h   Show help
 
     The following environment variables should be set when using kafka-client.py:
@@ -46,6 +52,8 @@ Get help:
     - CLOUD_TOOLS_KAFKA_CLIENT_USERNAME
     - CLOUD_TOOLS_KAFKA_CLIENT_PASSWORD
     - CLOUD_TOOLS_KAFKA_CLIENT_INSECURE
+
+    A file cloud-settings.sh is sourced if it is found.
 
 
 ## Error '...field is immutable'
@@ -137,7 +145,7 @@ or
 
 or
 
-    export KAFKA_CLIENT_PASSWORD=$(ws secretsmanager --profile someprofile get-secret-value --secret-id mykafkaclient --no-cli-pager --output json | jq -r .SecretString)
+    export KAFKA_CLIENT_PASSWORD=$(aws secretsmanager --profile someprofile get-secret-value --secret-id mykafkaclient --no-cli-pager --output json | jq -r .SecretString)
 
 
 ### Shell into cluster
@@ -150,21 +158,29 @@ or
     user@cloud-tools-myhost-myuser--abcd123:/data$ kafka-client.py --help
     Usage: kafka-client.py [OPTIONS] COMMAND [ARGS]...
 
-    Receive messages.
+    A simple kafka commandline client written in python. It sends and receives
+    messages while optionally decoding them using plugins.
+
+    Copyright (c) 2022 Matthias Goebl (matthias dot goebl at goebl dot net)
+
+    Published under the Apache License Version 2.0
+
+    For details see https://github.com/matgoebl/cloud-tools/
 
     Options:
-    -b, --bootstrap TEXT  Kafka bootstrap server.  [default: localhost:9093]
+    -b, --bootstrap TEXT   Kafka bootstrap server.  [default: localhost:9093]
     -v, --verbose
-    -U, --username TEXT   Kafka username.
-    -P, --password TEXT   Kafka password.
-    -S, --insecure        Do not verfy SSL.
-    -M, --dnsmap TEXT     Remap DNS names.
-    --help                Show this message and exit.
+    -U, --username TEXT    Kafka username.
+    -P, --password TEXT    Kafka password.
+    -S, --insecure         Do not verfy SSL.
+    -M, --dnsmap TEXT      Remap DNS names.
+    -I, --pluginpath TEXT  Load encoder/decoder plugins from given path.
+    --help                 Show this message and exit.
 
     Commands:
     list  List topics.
     recv  Receive messages.
-    send  Send message.
+    send  Send messages.
 
 
     user@cloud-tools-myhost-myuser--abcd123:/data$ kafka-client.py list --help
@@ -179,16 +195,23 @@ or
     user@cloud-tools-myhost-myuser--abcd123:/data$ kafka-client.py send --help
     Usage: kafka-client.py send [OPTIONS]
 
-    Send message.
+    Send messages.
 
     Options:
     -t, --topic TEXT            Topic to send to.  [required]
-    -k, --key TEXT              Key to use for sending.  [default: TEST]
+    -k, --key TEXT              Key to use for sending.
+    -K, --keyfile FILENAME      Read key from file.
     -h, --headers TEXT          Header to set for every sent message, e.g.
                                 abc:123;xyz:987
-    -p, --payload TEXT          Payload to send.  [default: abc123]
+    -p, --payload TEXT          Payload to send.
     -H, --headersfile FILENAME  Read headers from file.
     -P, --payloadfile FILENAME  Read payload from file.
+    -r, --rate INTEGER          Rate limit in requests per second (default:
+                                almost no limit)
+    -m, --multiline             Read keys and payloads line-by-line from their
+                                files
+    -c, --count INTEGER         Number of messages to send (ignored in multiline
+                                mode).  [default: 1]
     --help                      Show this message and exit.
 
 
@@ -202,12 +225,15 @@ or
     -c, --count INTEGER       Number of messages to receive (will be rounded to
                                 multiple of partitions).  [default: 1]
     -f, --follow              Wait for new messages.
-    -j, --jump TEXT           Jump to given date and time.
+    -j, --jump TEXT           Jump to given date and time, e.g. "2023-01-18
+                                22:04:10". A single negative number will seek back
+                                the given number of seconds, e.g. "-60" will start
+                                a minute ago.
     -w, --writefilepath TEXT  Write messages (.data), headers (.header) and keys
-                              (.key) to files named <topic>.<number> at the
-                              given path (e.g. "."). The header may contain
-                              string dumps, that cannot be transparently sent
-                              again via "send" command.
+                                (.key) to files named <topic>.<number> at the
+                                given path (e.g. "."). The header may contain
+                                string dumps, that cannot be transparently sent
+                                again via "send" command.
     -k, --key TEXT            Filter for messages with the given key.
     -s, --searchpayload TEXT  Filter for message whose payload matches the given
                                 regex.
@@ -263,7 +289,13 @@ Get help:
     $ avro-tool.py --help
     Usage: avro-tool.py [OPTIONS] COMMAND [ARGS]...
 
-    AVRO Message Encoder/Decoder.
+    AVRO Message Encoder/Decoder written in python.
+
+    Copyright (c) 2022 Matthias Goebl (matthias dot goebl at goebl dot net)
+
+    Published under the Apache License Version 2.0
+
+    For details see https://github.com/matgoebl/cloud-tools/
 
     Options:
     -s, --schema FILENAME  AVRO schema file to use (.avsc)  [required]

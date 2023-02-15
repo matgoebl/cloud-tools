@@ -1,16 +1,25 @@
 #!/usr/bin/env python3
+"""
+AVRO Message Encoder/Decoder written in python.
+
+Copyright (c) 2022 Matthias Goebl (matthias dot goebl at goebl dot net)
+
+Published under the Apache License Version 2.0
+
+For details see https://github.com/matgoebl/cloud-tools/
+"""
+
 import fastavro
 import click
 import logging
 import sys
 import json
 
-@click.group()
+@click.group(help=__doc__)
 @click.option('-s', '--schema',  help='AVRO schema file to use (.avsc)', type=click.File('r'), required=True)
 @click.option('-v', '--verbose', help="Be more verbose, can be repeated (up to 3 times).", count=True)
 @click.pass_context
 def avro_tool(ctx, schema, verbose):
-    """AVRO Message Encoder/Decoder."""
     logging.basicConfig(level=logging.WARNING-10*verbose,handlers=[logging.StreamHandler()],format="[%(levelname)s] %(message)s")
     ctx.obj = {}
     ctx.obj['parsed_schema'] = fastavro.schema.load_schema(schema.name)
