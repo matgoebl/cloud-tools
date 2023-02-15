@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+"""
+A simple kinesis commandline client written in python.
+It sends and receives messages while optionally decoding them using plugins.
+
+Copyright (c) 2022 Matthias Goebl (matthias dot goebl at goebl dot net)
+
+Published under the Apache License Version 2.0
+
+For details see https://github.com/matgoebl/cloud-tools/
+"""
+
 from kinesis.consumer import KinesisConsumer
 from kinesis.producer import KinesisProducer
 from aws_kinesis_agg.deaggregator import iter_deaggregate_records
@@ -21,12 +32,11 @@ from yapsy.PluginFileLocator import PluginFileLocator, PluginFileAnalyzerMathing
 
 timeout_secs = 1
 
-@click.group()
+@click.group(help=__doc__)
 @click.option('-v', '--verbose',  count=True)
 @click.option('-I', '--pluginpath',    help='Load encoder/decoder plugins from given path.')
 @click.pass_context
 def kinesis_client(ctx, pluginpath, verbose):
-    """Receive messages."""
     logging.basicConfig(level=logging.WARNING-10*verbose,handlers=[logging.StreamHandler()],format="[%(levelname)s] %(message)s")
     ctx.obj = {}
 
@@ -53,7 +63,7 @@ def list(ctx):
 @click.option('-P', '--payloadfile', help='Read payload from file.', type=click.File('rb'))
 @click.pass_context
 def send(ctx, topic, key, payload, payloadfile):
-    """Send message."""
+    """Send messages."""
     if payloadfile:
         payload = payloadfile.read()
     else:

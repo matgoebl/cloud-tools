@@ -1,4 +1,13 @@
 #!/bin/bash
+__DOC__=$(cat <<__X__
+  cloud-tools-deploy.sh - deploys my Cloud Tools
+
+  Copyright (c) 2022 Matthias Goebl (matthias dot goebl at goebl dot net)
+  Published under the Apache License Version 2.0
+  For details see https://github.com/matgoebl/cloud-tools/
+__X__
+)
+
 set -euo pipefail
 IFS=$' \n\t'
 
@@ -18,7 +27,10 @@ export CLOUD_TOOLS_ARG=''
 
 usage ()
 {
+ echo "$__DOC__"
+ echo
  echo "usage: $0 [OPTS] [ARGS]"
+ echo
  sed -n 's/^   \(.\))#\(.*\)$/ -\1 \2/p' < $0
  echo
  echo "The following environment variables should be set when using kafka-client.py:"
@@ -27,7 +39,7 @@ usage ()
  echo "- CLOUD_TOOLS_KAFKA_CLIENT_PASSWORD"
  echo "- CLOUD_TOOLS_KAFKA_CLIENT_INSECURE"
  echo
- echo "A file cloud-settings.sh is sourced if found."
+ echo "A file cloud-settings.sh is sourced if it is found."
  echo
 }
 
