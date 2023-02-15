@@ -180,7 +180,6 @@ def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, sea
     num_partitions = len(topicpartitions)
     count_per_partition = math.ceil(count / num_partitions)
     count = count_per_partition * num_partitions
-    count_max = 0
     for topicpartition in topicpartitions:
         end_offset = offsets.get(topicpartition)
         if jump:
@@ -192,10 +191,7 @@ def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, sea
             seek_offset = end_offset - count_per_partition
             if seek_offset < 0:
                 seek_offset = 0
-        count_max += end_offset - seek_offset
         consumer.seek(topicpartition, seek_offset)
-    if count_max < count:
-        count = count_max
 
 
     n = 0
