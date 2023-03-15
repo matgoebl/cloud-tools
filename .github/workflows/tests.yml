@@ -40,4 +40,4 @@ jobs:
 
       - name: Run Tests
         shell: bash
-        run: cd demo && env APP=../src/ ./tests.sh --with-setup-env
+        run: cd demo && env APP=$PWD/../src/ ./tests.sh --with-setup-env

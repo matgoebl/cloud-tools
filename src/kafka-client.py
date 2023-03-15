@@ -107,11 +107,14 @@ def list(ctx):
 @click.pass_context
 def send(ctx, topic, key, keyfile, headers, headersfile, payload, payloadfile, rate, multiline, count):
     """Send messages."""
+    if headersfile:
+        headers = headersfile.read().rstrip('\n')
+
     headerlist = None
     if headers:
         headerlist = []
         for header in re.split(r'[;\n]', headers):
-            k, v = header.split(':')
+            k, v = header.split(':',1)
             headerlist.append((k,v.encode('utf-8')))
 
     if not keyfile:
@@ -123,9 +126,6 @@ def send(ctx, topic, key, keyfile, headers, headersfile, payload, payloadfile, r
         payload = payload.encode('utf-8')
     elif not multiline:
         payload = payloadfile.read()
-
-    if headersfile:
-        headers = headersfile.read().rstrip('\n')
 
     producer = KafkaProducer(**ctx.obj['producer_args'])
 
