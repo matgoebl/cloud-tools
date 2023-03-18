@@ -1,11 +1,18 @@
 export PATH=$PATH:/app:/app/kafka/bin:/data/in:/tmp/in
 . .venv/bin/activate
 PS1='\u@\h:\w\$ '
+
 echo 'Welcome to Cloud Tools -- https://github.com/matgoebl/cloud-tools'
 echo
+
 if [ -d /data/ ]; then
  cd /data/
 else
  cd /tmp/
 fi
+
+eval "$(env _KAFKA_CLIENT.PY_COMPLETE=bash_source kafka-client.py)"
+eval "$(env _KINESIS_CLIENT.PY_COMPLETE=bash_source kinesis-client.py)"
+eval "$(env _AVRO_TOOL.PY_COMPLETE=bash_source avro-tool.py)"
+
 [ -e ./in/cloud.bashrc ] && source ./in/cloud.bashrc
