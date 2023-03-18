@@ -28,8 +28,8 @@ export APP:=$(SRC)
 
 forward:
 	@echo "Forward bootstrap server and broker ports..."
-	kubectl port-forward --namespace $(NAMESPACE) services/$(KAFKA_SERVICE) 9093:9093  & 
-	kubectl port-forward --namespace $(NAMESPACE) services/$(KAFKA_SERVICE) 19093:9093 &
+	kubectl port-forward --namespace $(NAMESPACE) services/$(KAFKA_SERVICE) 9093:9093 >/dev/null &
+	kubectl port-forward --namespace $(NAMESPACE) services/$(KAFKA_SERVICE) 19093:9093 >/dev/null &
 
 forward-kill:
 	pkill -e -f "^kubectl port-forward --namespace $(NAMESPACE)"
