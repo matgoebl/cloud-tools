@@ -155,6 +155,7 @@ def send(ctx, topic, key, keyfile, headers, headersfile, payload, payloadfile, r
 @kafka_client.command()
 @click.option('-t', '--topic',         help='Topic to receive from.', required=True)
 @click.option('-c', '--count',         help='Number of messages to receive (will be rounded to multiple of partitions).', type=int, default=1, show_default=True)
+@click.option('-C', '--matchedcount',  help='Number of matched messages to receive.', type=int, default=None, show_default=True)
 @click.option('-f', '--follow',        help='Wait for new messages.', is_flag=True)
 @click.option('-j', '--jump',          help='Jump to given date and time, e.g. "2023-01-18 22:04:10". A single negative number will seek back the given number of seconds, e.g. "-60" will start a minute ago.')
 @click.option('-w', '--writefilepath', help='Write messages (.data), headers (.header) and keys (.key) to files named <topic>.<number> at the given path (e.g. "."). The header may contain string dumps, that cannot be transparently sent again via "send" command.')
@@ -164,7 +165,7 @@ def send(ctx, topic, key, keyfile, headers, headersfile, payload, payloadfile, r
 @click.option('-X', '--extractheader', help='Extract and output the given header field for each message.')
 @click.option('-q', '--quiet',         help='By quiet.', is_flag=True)
 @click.pass_context
-def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, searchheader, extractheader, quiet):
+def recv(ctx, topic, count, matchedcount, follow, jump, writefilepath, key, searchpayload, searchheader, extractheader, quiet):
     """Receive messages."""
     consumer = KafkaConsumer(**ctx.obj['consumer_args'])
     topicpartitions = [TopicPartition(topic, partition) for partition in consumer.partitions_for_topic(topic)]
@@ -196,13 +197,18 @@ def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, sea
 
     n = 0
     m = 0
-    while n < count or follow:
+    dt_first = None
+    dt_last = None
+    while ( m < matchedcount if matchedcount else n < count ) or follow:
         topic_msgs = consumer.poll(timeout_ms=timeout_secs*1000)
         if len(topic_msgs) == 0 and not follow:
             break
         for topic, msgs in topic_msgs.items():
             for msg in msgs:
-                if n < count or follow:
+                if not dt_first:
+                    dt_first = datetime.datetime.fromtimestamp(msg.timestamp//1000).replace(microsecond=0).astimezone().isoformat()
+
+                if ( m < matchedcount if matchedcount else n < count ) or follow:
                     n = n + 1
                     logging.debug(f"Received message: {msg}")
 
@@ -258,9 +264,12 @@ def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, sea
                         if decoded_payload:
                             with open(basefilename + '.json', 'w') as f:
                                 f.write(json.dumps(decoded_payload, indent=4, sort_keys=True, default=str))
+                else:
+                    dt_last = datetime.datetime.fromtimestamp(msg.timestamp//1000).replace(microsecond=0).astimezone().isoformat()
+
 
     if key or searchpayload or searchheader:
-        print(f"# filtered {m} of {n} received messages")
+        print(f"# filtered {m} of {n} received messages ({dt_first} until {dt_last or 'now'})")
 
 
 if __name__ == '__main__':
