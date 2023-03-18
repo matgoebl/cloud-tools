@@ -15,4 +15,14 @@ eval "$(env _KAFKA_CLIENT.PY_COMPLETE=bash_source kafka-client.py)"
 eval "$(env _KINESIS_CLIENT.PY_COMPLETE=bash_source kinesis-client.py)"
 eval "$(env _AVRO_TOOL.PY_COMPLETE=bash_source avro-tool.py)"
 
+if type -p complete_alias >/dev/null; then
+ . complete_alias
+ alias kafc=kafka-client.py
+ alias kinc=kinesis-client.py
+ alias avrot=avro-tool.py
+ complete -F _complete_alias kafc
+ complete -F _complete_alias kinc
+ complete -F _complete_alias avrot
+fi
+
 [ -e ./in/cloud.bashrc ] && source ./in/cloud.bashrc

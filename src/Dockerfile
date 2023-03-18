@@ -8,6 +8,7 @@ ADD Pipfile.lock Pipfile /app/
 WORKDIR /app
 RUN pipenv sync
 RUN cd .venv/ && wget --continue https://repo1.maven.org/maven2/org/apache/avro/avro-tools/1.11.1/avro-tools-1.11.1.jar
+RUN cd .venv/bin/ && wget --continue https://raw.githubusercontent.com/cykerway/complete-alias/1.18.0/complete_alias
 RUN curl -O https://archive.apache.org/dist/kafka/3.3.2/kafka_$KAFKA_VERSION.tgz && tar -xzf kafka_$KAFKA_VERSION.tgz
 
 FROM docker.io/python:3.9-bullseye
