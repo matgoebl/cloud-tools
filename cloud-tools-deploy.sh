@@ -115,7 +115,8 @@ spec:
           emptyDir:
             sizeLimit: 1Gi
       containers:
-      - image: ${IMAGEURL:-ghcr.io/matgoebl/cloud-tools:latest}
+      - image: ${IMAGEURL:-${IMAGEBASEURL:-ghcr.io/matgoebl/cloud-tools}:${IMAGETAG:-latest}}
+        ${IMAGETAG:+imagePullPolicy: Always}
         name: $IDENTIFIER
         resources:
           requests:
@@ -159,7 +160,7 @@ pod=""
 while [ -z "$pod" ]; do
  echo -n .
  sleep 1
- read namespace pod < <( kubectl get pods --all-namespaces --sort-by=.metadata.creationTimestamp | sed -ne 's/^\('"$NAMESPACE"'\)  *\('"$IDENTIFIER-"'[^ ]*\) .*Running.*$/\1 \2/p' | tail -n 1; echo)
+ read namespace pod < <( kubectl get pods --all-namespaces --sort-by=.metadata.creationTimestamp | sed -ne 's/^\('"$NAMESPACE"'\)  *\('"$IDENTIFIER-"'[^ ]*\) .*Running.*$/\1 \2/p' | tail -n 1; echo 2>/dev/null )
 done
 echo
 
