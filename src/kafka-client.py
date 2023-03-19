@@ -199,7 +199,8 @@ def recv(ctx, topic, count, matchedcount, follow, jump, writefilepath, key, sear
     m = 0
     dt_first = None
     dt_last = None
-    while ( m < matchedcount if matchedcount else n < count ) or follow:
+    stop = False
+    while not stop:
         topic_msgs = consumer.poll(timeout_ms=timeout_secs*1000)
         if len(topic_msgs) == 0 and not follow:
             break
@@ -265,11 +266,12 @@ def recv(ctx, topic, count, matchedcount, follow, jump, writefilepath, key, sear
                             with open(basefilename + '.json', 'w') as f:
                                 f.write(json.dumps(decoded_payload, indent=4, sort_keys=True, default=str))
                 else:
+                    stop = True
                     dt_last = datetime.datetime.fromtimestamp(msg.timestamp//1000).replace(microsecond=0).astimezone().isoformat()
 
 
     if key or searchpayload or searchheader:
-        print(f"# filtered {m} of {n} received messages ({dt_first} until {dt_last or 'now'})")
+        print(f"# filtered {m} of {n} received messages ({dt_first or 'never'} until {dt_last or 'now'})")
 
 
 if __name__ == '__main__':
