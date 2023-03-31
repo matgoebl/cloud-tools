@@ -32,7 +32,7 @@ forward:
 	kubectl port-forward --namespace $(NAMESPACE) services/$(KAFKA_SERVICE) 19093:9093 >/dev/null &
 
 forward-kill:
-	pkill -e -f "^kubectl port-forward --namespace $(NAMESPACE)"
+	-pkill -e -f "^kubectl port-forward --namespace $(NAMESPACE)"
 
 tests:
 	./tests.sh --with-setup-env
