@@ -81,6 +81,8 @@ def kafka_client(ctx, bootstrap, username, password, insecure, dnsmap, pluginpat
         plugin_manager.collectPlugins()
         ctx.obj['plugin_manager'] = plugin_manager
 
+    return ctx.obj
+
 
 @kafka_client.command()
 @click.pass_context
@@ -93,8 +95,16 @@ def list(ctx):
         print(topic)
 
 
+def complete_topics(ctx, param, incomplete):
+    obj = ctx.parent.invoke(kafka_client, **ctx.parent.params)
+    consumer = KafkaConsumer(**obj['consumer_args'])
+    topics = [topic for topic in consumer.topics()]
+    topics.sort()
+    return [topic for topic in topics if topic.startswith(incomplete)]
+
+
 @kafka_client.command()
-@click.option('-t', '--topic',       help='Topic to send to.', required=True)
+@click.option('-t', '--topic',       help='Topic to send to.', required=True, shell_complete=complete_topics)
 @click.option('-k', '--key',         help='Key to use for sending.', default='', show_default=True)
 @click.option('-K', '--keyfile',     help='Read key from file.', type=click.File('rb'))
 @click.option('-h', '--headers',     help='Header to set for every sent message, e.g. abc:123;xyz:987')
@@ -153,7 +163,7 @@ def send(ctx, topic, key, keyfile, headers, headersfile, payload, payloadfile, r
 
 
 @kafka_client.command()
-@click.option('-t', '--topic',         help='Topic to receive from.', required=True)
+@click.option('-t', '--topic',         help='Topic to receive from.', required=True, shell_complete=complete_topics)
 @click.option('-c', '--count',         help='Number of messages to receive (will be rounded to multiple of partitions).', type=int, default=1, show_default=True)
 @click.option('-C', '--matchedcount',  help='Number of matched messages to receive.', type=int, default=None, show_default=True)
 @click.option('-f', '--follow',        help='Wait for new messages.', is_flag=True)
