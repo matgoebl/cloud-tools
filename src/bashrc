@@ -27,4 +27,5 @@ else
  cd /tmp/
 fi
 
+[ -e /app/bashrc.local ] && source /app/bashrc.local
 [ -e ./in/cloud.bashrc ] && source ./in/cloud.bashrc
