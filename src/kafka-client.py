@@ -38,7 +38,8 @@ timeout_secs = 1
 @click.pass_context
 def kafka_client(ctx, bootstrap, username, password, insecure, dnsmap, pluginpath, verbose):
     logging.basicConfig(level=logging.WARNING-10*verbose,handlers=[logging.StreamHandler()],format="[%(levelname)s] %(message)s")
-    ctx.obj = {}
+    cfg = {}
+    ctx.obj = cfg
 
     conn_args = {
         'bootstrap_servers': [bootstrap],
@@ -62,8 +63,8 @@ def kafka_client(ctx, bootstrap, username, password, insecure, dnsmap, pluginpat
             'sasl_plain_password': password,
         }
 
-    ctx.obj['producer_args'] = conn_args
-    ctx.obj['consumer_args'] = conn_args | {
+    cfg['producer_args'] = conn_args
+    cfg['consumer_args'] = conn_args | {
         'group_id': None,
         'enable_auto_commit': False,
         'auto_offset_reset': 'earliest',
@@ -79,16 +80,16 @@ def kafka_client(ctx, bootstrap, username, password, insecure, dnsmap, pluginpat
         plugin_manager = PluginManager()
         plugin_manager.setPluginLocator(locator,[pluginpath])
         plugin_manager.collectPlugins()
-        ctx.obj['plugin_manager'] = plugin_manager
+        cfg['plugin_manager'] = plugin_manager
 
-    return ctx.obj
+    return cfg
 
 
 @kafka_client.command()
-@click.pass_context
-def list(ctx):
+@click.pass_obj
+def list(cfg):
     """List topics."""
-    consumer = KafkaConsumer(**ctx.obj['consumer_args'])
+    consumer = KafkaConsumer(**cfg['consumer_args'])
     topics = [topic for topic in consumer.topics()]
     topics.sort()
     for topic in topics:
@@ -96,8 +97,8 @@ def list(ctx):
 
 
 def complete_topics(ctx, param, incomplete):
-    obj = ctx.parent.invoke(kafka_client, **ctx.parent.params)
-    consumer = KafkaConsumer(**obj['consumer_args'])
+    cfg = ctx.parent.invoke(kafka_client, **ctx.parent.params)
+    consumer = KafkaConsumer(**cfg['consumer_args'])
     topics = [topic for topic in consumer.topics()]
     topics.sort()
     return [topic for topic in topics if topic.startswith(incomplete)]
@@ -114,8 +115,8 @@ def complete_topics(ctx, param, incomplete):
 @click.option('-r', '--rate',        help='Rate limit in requests per second (default: almost no limit)', type=int, default=999999999999)
 @click.option('-m', '--multiline',   help='Read keys and payloads line-by-line from their files', is_flag=True)
 @click.option('-c', '--count',       help='Number of messages to send (ignored in multiline mode).', type=int, default=1, show_default=True)
-@click.pass_context
-def send(ctx, topic, key, keyfile, headers, headersfile, payload, payloadfile, rate, multiline, count):
+@click.pass_obj
+def send(cfg, topic, key, keyfile, headers, headersfile, payload, payloadfile, rate, multiline, count):
     """Send messages."""
     if headersfile:
         headers = headersfile.read().rstrip('\n')
@@ -137,7 +138,7 @@ def send(ctx, topic, key, keyfile, headers, headersfile, payload, payloadfile, r
     elif not multiline:
         payload = payloadfile.read()
 
-    producer = KafkaProducer(**ctx.obj['producer_args'])
+    producer = KafkaProducer(**cfg['producer_args'])
 
     rate_limiter = ratelimiter.RateLimiter(max_calls=rate, period=1)
 
@@ -174,10 +175,10 @@ def send(ctx, topic, key, keyfile, headers, headersfile, payload, payloadfile, r
 @click.option('-S', '--searchheader',  help='Filter for message whose headers match the given regex.')
 @click.option('-X', '--extractheader', help='Extract and output the given header field for each message.')
 @click.option('-q', '--quiet',         help='By quiet.', is_flag=True)
-@click.pass_context
-def recv(ctx, topic, count, matchedcount, follow, jump, writefilepath, key, searchpayload, searchheader, extractheader, quiet):
+@click.pass_obj
+def recv(cfg, topic, count, matchedcount, follow, jump, writefilepath, key, searchpayload, searchheader, extractheader, quiet):
     """Receive messages."""
-    consumer = KafkaConsumer(**ctx.obj['consumer_args'])
+    consumer = KafkaConsumer(**cfg['consumer_args'])
     topicpartitions = [TopicPartition(topic, partition) for partition in consumer.partitions_for_topic(topic)]
     consumer.assign(topicpartitions)
     offsets = consumer.end_offsets(topicpartitions)
@@ -253,8 +254,8 @@ def recv(ctx, topic, count, matchedcount, follow, jump, writefilepath, key, sear
                         continue
 
                     decoded_payload = None
-                    if 'plugin_manager' in ctx.obj:
-                        for plugin in ctx.obj['plugin_manager'].getAllPlugins():
+                    if 'plugin_manager' in cfg:
+                        for plugin in cfg['plugin_manager'].getAllPlugins():
                             decoded_payload = plugin.plugin_object.decode(msg.value, topic.topic)
                             if decoded_payload:
                                 break
