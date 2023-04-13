@@ -22,6 +22,7 @@ import ssl
 import math
 import json
 import ratelimiter
+import codecs
 from yapsy.PluginManager import PluginManager, IPluginLocator
 from yapsy.PluginFileLocator import PluginFileLocator, PluginFileAnalyzerMathingRegex
 
@@ -104,6 +105,19 @@ def complete_topics(ctx, param, incomplete):
     return [topic for topic in topics if topic.startswith(incomplete)]
 
 
+def unescape_str(data: str) -> str:
+     return unescape(data).decode('utf-8','ignore')
+
+def unescape(data: bytes) -> bytes:
+    return codecs.escape_decode( data.encode('utf-8') )[0]
+
+def escape_str(data: str) -> str:
+    return escape( data.encode('utf-8') )
+
+def escape(data: bytes) -> str:
+    return ( codecs.escape_encode(data)[0] ) .replace(b':',b'\x3a') .decode('ascii','backslashreplace')
+
+
 @kafka_client.command()
 @click.option('-t', '--topic',       help='Topic to send to.', required=True, shell_complete=complete_topics)
 @click.option('-k', '--key',         help='Key to use for sending.', default='', show_default=True)
@@ -126,15 +140,15 @@ def send(cfg, topic, key, keyfile, headers, headersfile, payload, payloadfile, r
         headerlist = []
         for header in re.split(r'[;\n]', headers):
             k, v = header.split(':',1)
-            headerlist.append((k,v.encode('utf-8')))
+            headerlist.append( (unescape_str(k), unescape(v)) )
 
     if not keyfile:
-        key=key.encode('utf-8')
+        key=unescape(key)
     elif not multiline:
-        key = keyfile.read().rstrip(b'\n')
+        key = keyfile.read()
 
     if not payloadfile:
-        payload = payload.encode('utf-8')
+        payload = unescape(payload)
     elif not multiline:
         payload = payloadfile.read()
 
@@ -169,7 +183,7 @@ def send(cfg, topic, key, keyfile, headers, headersfile, payload, payloadfile, r
 @click.option('-C', '--matchedcount',  help='Number of matched messages to receive.', type=int, default=None, show_default=True)
 @click.option('-f', '--follow',        help='Wait for new messages.', is_flag=True)
 @click.option('-j', '--jump',          help='Jump to given date and time, e.g. "2023-01-18 22:04:10". A single negative number will seek back the given number of seconds, e.g. "-60" will start a minute ago.')
-@click.option('-w', '--writefilepath', help='Write messages (.data), headers (.header) and keys (.key) to files named <topic>.<number> at the given path (e.g. "."). The header may contain string dumps, that cannot be transparently sent again via "send" command.')
+@click.option('-w', '--writefilepath', help='Write messages (.data), headers (.header) and keys (.key) to files named <topic>.<number> at the given path (e.g. ".").')
 @click.option('-k', '--key',           help='Filter for messages with the given key.')
 @click.option('-s', '--searchpayload', help='Filter for message whose payload matches the given regex.')
 @click.option('-S', '--searchheader',  help='Filter for message whose headers match the given regex.')
@@ -224,24 +238,22 @@ def recv(cfg, topic, count, matchedcount, follow, jump, writefilepath, key, sear
                     n = n + 1
                     logging.debug(f"Received message: {msg}")
 
-                    if key and msg.key.decode('utf-8', 'ignore') != key:
+                    if key and msg.key != unescape(key):
                         continue
 
-                    if searchpayload and not re.search(searchpayload, msg.value.decode('utf-8', 'ignore'), flags=re.IGNORECASE):
+                    if searchpayload and not re.search(searchpayload, msg.value.decode('ascii','backslashreplace'), flags=re.IGNORECASE):
                         continue
 
                     headers = ""
                     for k,v in msg.headers:
-                        try:
-                            v = v.decode('utf-8','strict')
-                        except:
-                            pass
+                        k = escape_str(k)
+                        v = escape(v)
                         headers += f"{k}:{v}\n"
                         if extractheader and k == extractheader:
                             print(f"{k}:{v}")
 
                     if extractheader == '':
-                        print(msg.key.decode('utf-8', 'ignore'))
+                        print(escape(msg.key))
 
                     headers_oneline = headers.removesuffix('\n').replace('\n',';')
 
