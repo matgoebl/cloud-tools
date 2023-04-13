@@ -15,11 +15,16 @@ echo '*** Test list:'
 kafka-client.py list
 
 echo '*** Test send:'
-kafka-client.py send -t demo-topic -k TEST-KEY -h 'abc:123;xyz:987' -p 'Hello World!'
+kafka-client.py send -t demo-topic -k TEST-KEY1 -h 'abc:123;xyz:987' -p 'Hello World!'
+kafka-client.py send -t demo-topic -k TEST-KEY2 -h 'abc:456;xyz:987' -p 'Hello World!'
+kafka-client.py send -t demo-topic -k 'TEST-KEY\x33' -h 'abc:78\x39;xyz:987' -p 'Hello World\x21'
 
 echo '*** Test recv:'
-kafka-client.py recv -t demo-topic -c 3 | grep Hello
-kafka-client.py recv -t demo-topic -c 3 -X '' -q | grep TEST-KEY
+kafka-client.py recv -t demo-topic -c 3 -s Hello | grep Hello
+kafka-client.py recv -t demo-topic -c 3 -k TEST-KEY1 -X '' -q | grep TEST-KEY1
+kafka-client.py recv -t demo-topic -c 3 -S 'abc:123' -X abc -q | grep abc:123
+kafka-client.py recv -t demo-topic -c 3 -k 'TEST\x2dKEY3' -X '' -q | grep TEST-KEY3
+kafka-client.py recv -t demo-topic -c 3 -S '\x61bc:\x3789' -X abc -q | grep abc:789
 
 echo '*** Test send & receive from files:'
 kafka-client.py send -t demo-topic -K ../demo.key -H ../demo.header -P ../demo.data
