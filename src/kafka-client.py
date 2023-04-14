@@ -105,26 +105,26 @@ def complete_topics(ctx, param, incomplete):
     return [topic for topic in topics if topic.startswith(incomplete)]
 
 
-def unescape_str(data: str) -> str:
-     return unescape(data).decode('utf-8','ignore')
+def unescape_bin_str(data: bytes) -> str:
+     return unescape_bin(data).decode('utf-8','backslashreplace')
 
-def unescape(data: bytes) -> bytes:
+def unescape_bin(data: bytes) -> bytes:
+    return codecs.escape_decode( data )[0]
+
+def unescape(data: str) -> bytes:
     return codecs.escape_decode( data.encode('utf-8') )[0]
 
-def escape_str(data: str) -> str:
-    return escape( data.encode('utf-8') )
-
 def escape(data: bytes) -> str:
-    return ( codecs.escape_encode(data)[0] ) .replace(b':',b'\x3a') .decode('ascii','backslashreplace')
+    return ( codecs.escape_encode(data)[0] ) .replace(b':',b'\\x3a')
 
 
 @kafka_client.command()
 @click.option('-t', '--topic',       help='Topic to send to.', required=True, shell_complete=complete_topics)
-@click.option('-k', '--key',         help='Key to use for sending.', default='', show_default=True)
+@click.option('-k', '--key',         help='Key to use for sending.', default=b'', show_default=True)
 @click.option('-K', '--keyfile',     help='Read key from file.', type=click.File('rb'))
-@click.option('-h', '--headers',     help='Header to set for every sent message, e.g. abc:123;xyz:987')
-@click.option('-p', '--payload',     help='Payload to send.', default='', show_default=True)
-@click.option('-H', '--headersfile', help='Read headers from file.', type=click.File('r'))
+@click.option('-h', '--headers',     help='Header to set for every sent message, e.g. abc:123;xyz:987', default=b'')
+@click.option('-p', '--payload',     help='Payload to send.', default=b'', show_default=True)
+@click.option('-H', '--headersfile', help='Read headers from file.', type=click.File('rb'))
 @click.option('-P', '--payloadfile', help='Read payload from file.', type=click.File('rb'))
 @click.option('-r', '--rate',        help='Rate limit in requests per second (default: almost no limit)', type=int, default=999999999999)
 @click.option('-m', '--multiline',   help='Read keys and payloads line-by-line from their files', is_flag=True)
@@ -133,14 +133,16 @@ def escape(data: bytes) -> str:
 def send(cfg, topic, key, keyfile, headers, headersfile, payload, payloadfile, rate, multiline, count):
     """Send messages."""
     if headersfile:
-        headers = headersfile.read().rstrip('\n')
+        headers = headersfile.read().rstrip(b'\n')
+    else:
+        headers = headers.encode('utf-8')
 
     headerlist = None
     if headers:
         headerlist = []
-        for header in re.split(r'[;\n]', headers):
-            k, v = header.split(':',1)
-            headerlist.append( (unescape_str(k), unescape(v)) )
+        for header in re.split(br'[;\n]', headers):
+            k, v = header.split(b':',1)
+            headerlist.append( (unescape_bin_str(k), unescape_bin(v)) )
 
     if not keyfile:
         key=unescape(key)
@@ -244,20 +246,22 @@ def recv(cfg, topic, count, matchedcount, follow, jump, writefilepath, key, sear
                     if searchpayload and not re.search(searchpayload, msg.value.decode('ascii','backslashreplace'), flags=re.IGNORECASE):
                         continue
 
-                    headers = ""
+                    headers = b''
+                    headers_oneline = ''
                     for k,v in msg.headers:
-                        k = escape_str(k)
-                        v = escape(v)
-                        headers += f"{k}:{v}\n"
+                        k_ = escape(k.encode('utf-8'))
+                        v_ = escape(v)
+                        headers += k_ + b':' + v_ + b'\n'
+                        headers_oneline += ';' + k + ':' + v.decode('utf-8','backslashreplace')
                         if extractheader and k == extractheader:
-                            print(f"{k}:{v}")
+                            print(f"{k}:{v.decode('ascii','backslashreplace')}")
 
                     if extractheader == '':
                         print(escape(msg.key))
 
-                    headers_oneline = headers.removesuffix('\n').replace('\n',';')
+                    headers_oneline = headers_oneline.removeprefix(';')
 
-                    if searchheader and not re.search('^'+searchheader+'$', headers, flags=re.IGNORECASE|re.MULTILINE):
+                    if searchheader and not re.search('^' + searchheader + '$', headers.decode('ascii','backslashreplace'), flags=re.IGNORECASE|re.MULTILINE):
                         continue
 
                     m = m + 1
@@ -283,7 +287,7 @@ def recv(cfg, topic, count, matchedcount, follow, jump, writefilepath, key, sear
                             f.write(msg.value)
                         with open(basefilename + '.key', 'wb') as f:
                             f.write(msg.key)
-                        with open(basefilename + '.header', 'w') as f:
+                        with open(basefilename + '.header', 'wb') as f:
                             f.write(headers)
                         if decoded_payload:
                             with open(basefilename + '.json', 'w') as f:

@@ -32,6 +32,14 @@ rm -rf demo-topic.0*
 kafka-client.py recv -t demo-topic -c 1 -w .
 for i in key header data; do diff -u ../demo.$i ./demo-topic.00001.$i; done
 
+echo '*** Test escaped binary send and receive round-trip:'
+kafka-client.py send -t demo-topic -K ../demo-bin.key -H ../demo-bin.header -P ../demo-bin.data
+kafka-client.py recv -t demo-topic -c 1 -S '.*with:colon' -w .
+for i in demo-topic.00001.{data,header,key}; do cp $i $i.orig; done
+kafka-client.py send -t demo-topic -K demo-topic.00001.key.orig -H demo-topic.00001.header.orig -P demo-topic.00001.data.orig
+kafka-client.py recv -t demo-topic -c 1 -S '.*with:colon' -w .
+for i in demo-topic.00001.{data,header,key}; do cmp $i $i.orig || exit 1; done
+
 echo '*** Test avro-tool:'
 avro-tools.sh idl2schemata ../demo.avdl ./
 avro-tools.sh fromjson --schema-file demo.avsc ../demo.json > demo.avro
