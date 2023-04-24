@@ -21,10 +21,10 @@ kafka-client.py send -t demo-topic -k 'TEST-KEY\x33' -h 'abc:78\x39;xyz:987' -p 
 
 echo '*** Test recv:'
 kafka-client.py recv -t demo-topic -c 3 -s Hello | grep Hello
-kafka-client.py recv -t demo-topic -c 3 -k TEST-KEY1 -X '' -q | grep TEST-KEY1
-kafka-client.py recv -t demo-topic -c 3 -S 'abc:123' -X abc -q | grep abc:123
-kafka-client.py recv -t demo-topic -c 3 -k 'TEST\x2dKEY3' -X '' -q | grep TEST-KEY3
-kafka-client.py recv -t demo-topic -c 3 -S '\x61bc:\x3789' -X abc -q | grep abc:789
+test "`kafka-client.py recv -t demo-topic -c 3 -k TEST-KEY1 -X '' -q`" = "TEST-KEY1"
+test "`kafka-client.py recv -t demo-topic -c 3 -S 'abc:123' -X abc -q`" = "123"
+test "`kafka-client.py recv -t demo-topic -c 3 -k 'TEST\x2dKEY3' -X '' -q`" = "TEST-KEY3"
+test "`kafka-client.py recv -t demo-topic -c 3 -S '\x61bc:\x3789' -X abc -q`" = "789"
 
 echo '*** Test send & receive from files:'
 kafka-client.py send -t demo-topic -K ../demo.key -H ../demo.header -P ../demo.data
@@ -34,7 +34,9 @@ for i in key header data; do diff -u ../demo.$i ./demo-topic.00001.$i; done
 
 echo '*** Test escaped binary send and receive round-trip:'
 kafka-client.py send -t demo-topic -K ../demo-bin.key -H ../demo-bin.header -P ../demo-bin.data
-kafka-client.py recv -t demo-topic -c 1 -S '.*with:colon' -w .
+rm -f demo-topic.*
+kafka-client.py recv -t demo-topic -c 1 -S '.*:value-with.*colon' -w .
+for i in {data,key}; do cmp ../demo-bin.$i demo-topic.00001.$i || exit 1; done
 for i in demo-topic.00001.{data,header,key}; do cp $i $i.orig; done
 kafka-client.py send -t demo-topic -K demo-topic.00001.key.orig -H demo-topic.00001.header.orig -P demo-topic.00001.data.orig
 kafka-client.py recv -t demo-topic -c 1 -S '.*with:colon' -w .

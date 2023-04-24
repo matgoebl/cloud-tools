@@ -247,24 +247,22 @@ def recv(cfg, topic, count, matchedcount, follow, jump, writefilepath, key, sear
                         continue
 
                     headers = b''
-                    headers_oneline = ''
                     for k,v in msg.headers:
                         k_ = escape(k.encode('utf-8'))
                         v_ = escape(v)
                         headers += k_ + b':' + v_ + b'\n'
-                        headers_oneline += ';' + k + ':' + v.decode('utf-8','backslashreplace')
-                        if extractheader and k == extractheader:
-                            print(f"{k}:{v.decode('ascii','backslashreplace')}")
-
-                    if extractheader == '':
-                        print(escape(msg.key))
-
-                    headers_oneline = headers_oneline.removeprefix(';')
 
                     if searchheader and not re.search('^' + searchheader + '$', headers.decode('ascii','backslashreplace'), flags=re.IGNORECASE|re.MULTILINE):
                         continue
 
                     m = m + 1
+
+                    if extractheader == '':
+                        print(escape(msg.key).decode('ascii','backslashreplace'))
+                    elif extractheader:
+                        v = b";".join( [ v for k,v in msg.headers if k == extractheader ] )
+                        if len(v) > 0:
+                            print(escape(v).decode('ascii','backslashreplace'))
 
                     if quiet and not writefilepath:
                         continue
@@ -278,6 +276,7 @@ def recv(cfg, topic, count, matchedcount, follow, jump, writefilepath, key, sear
 
                     dt = datetime.datetime.fromtimestamp(msg.timestamp//1000).replace(microsecond=0).astimezone().isoformat()
                     if not quiet:
+                        headers_oneline = headers.removesuffix(b'\n').replace(b'\n', b';').decode('ascii','backslashreplace')
                         print("%s %s(%d)%d [%s] %s:%s%s" % (dt, topic.topic, topic.partition, msg.offset, headers_oneline, msg.key, msg.value, decoded_payload and " = "+str(decoded_payload) or ""))
 
                     if writefilepath:
@@ -297,7 +296,7 @@ def recv(cfg, topic, count, matchedcount, follow, jump, writefilepath, key, sear
                     dt_last = datetime.datetime.fromtimestamp(msg.timestamp//1000).replace(microsecond=0).astimezone().isoformat()
 
 
-    if key or searchpayload or searchheader:
+    if ( key or searchpayload or searchheader) and not quiet:
         print(f"# filtered {m} of {n} received messages ({dt_first or 'never'} until {dt_last or 'now'})")
 
 
