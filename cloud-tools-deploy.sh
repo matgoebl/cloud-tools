@@ -91,9 +91,9 @@ shift $(($OPTIND - 1))
 [ -e cloud-settings.sh ] && source cloud-settings.sh
 
 
-if [ "$OP" = "destroy" ]; then
+if [ "$OP" != "connect" ]; then
  kubectl --namespace $NAMESPACE delete job/$IDENTIFIER || true
- exit 0
+ [ "$OP" = "destroy" ] && exit 0
 fi
 
 

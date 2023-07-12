@@ -30,7 +30,7 @@ import json
 from yapsy.PluginManager import PluginManager, IPluginLocator
 from yapsy.PluginFileLocator import PluginFileLocator, PluginFileAnalyzerMathingRegex
 
-timeout_secs = 1
+timeout_secs = 3
 
 @click.group(help=__doc__)
 @click.option('-v', '--verbose',  count=True)
@@ -78,7 +78,7 @@ def send(ctx, topic, key, payload, payloadfile):
 
 @kinesis_client.command()
 @click.option('-t', '--topic',         help='Topic to receive from.', required=True)
-@click.option('-c', '--count',         help='Number of messages to receive (will be rounded to multiple of partitions).', type=int, default=1, show_default=True)
+@click.option('-c', '--count',         help='Number of messages to receive.', type=int, default=1, show_default=True)
 @click.option('-f', '--follow',        help='Wait for new messages.', is_flag=True)
 @click.option('-j', '--jump',          help='Jump to given date and time, e.g. "2023-01-18 22:04:10". A single negative number will seek back the given number of seconds, e.g. "-60" will start a minute ago.')
 @click.option('-w', '--writefilepath', help='Write messages (.data), headers (.header) and keys (.key) to files named <topic>.<number> at the given path (e.g. "."). The header may contain string dumps, that cannot be transparently sent again via "send" command.')
@@ -99,7 +99,7 @@ def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, qui
         reset_timeout()
     for msgs in consumer:
         for msg in iter_deaggregate_records(msgs,data_format='Boto3'):
-            if n >= count and not follow:
+            if ( m >= count if key or searchpayload else n >= count ) and not follow:
                 stop = True
                 break
 
@@ -110,10 +110,10 @@ def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, qui
             n = n + 1
             logging.debug(f"Received message: {msg}: {payload}")
 
-            if key and msg.key.decode('utf-8', 'ignore') != key:
+            if key and msg['kinesis']['partitionKey'] != key:
                 continue
 
-            if searchpayload and not re.search(searchpayload, msg.value.decode('utf-8', 'ignore'), flags=re.IGNORECASE):
+            if searchpayload and not re.search(searchpayload, msg.value.decode('ascii','backslashreplace'), flags=re.IGNORECASE):
                 continue
 
             m = m + 1
@@ -121,7 +121,7 @@ def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, qui
             decoded_payload = None
             if 'plugin_manager' in ctx.obj:
                 for plugin in ctx.obj['plugin_manager'].getAllPlugins():
-                    decoded_payload = plugin.plugin_object.decode(msg.value, topic.topic)
+                    decoded_payload = plugin.plugin_object.decode(payload, topic)
                     if decoded_payload:
                         break
 
@@ -130,17 +130,17 @@ def recv(ctx, topic, count, follow, jump, writefilepath, key, searchpayload, qui
                 print("%s %s %s:%s%s" % (dt, msg['kinesis']['sequenceNumber'], msg['kinesis']['partitionKey'], payload, decoded_payload and " = "+str(decoded_payload) or ""))
 
             if writefilepath:
-                basefilename = os.path.join(writefilepath, "%s.%05i" % (topic.topic,n))
+                basefilename = os.path.join(writefilepath, "%s.%05i" % (topic,n))
                 logging.debug(f"Writing to {basefilename}.data, .header and .key")
                 with open(basefilename + '.data', 'wb') as f:
-                    f.write(msg.value)
+                    f.write(payload)
                 with open(basefilename + '.key', 'wb') as f:
-                    f.write(msg.key)
+                    f.write(msg['kinesis']['partitionKey'].encode('utf-8'))
                 if decoded_payload:
                     with open(basefilename + '.json', 'w') as f:
                         f.write(json.dumps(decoded_payload, indent=4, sort_keys=True, default=str))
 
-        if n >= count and not follow:
+        if ( m >= count if key or searchpayload else n >= count ) and not follow:
             break
         if not follow:
             reset_timeout()
