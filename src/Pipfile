@@ -23,5 +23,5 @@ ratelimiter = "*"
 [requires]
 python_version = "3.9"
 
-[packages.e894b65]
+[packages.kinesis-python]
 file = "https://github.com/matgoebl/kinesis-python/archive/refs/heads/master.zip"
