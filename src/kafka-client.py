@@ -243,9 +243,6 @@ def recv(cfg, topic, count, matchedcount, follow, jump, writefilepath, key, sear
                     if key and msg.key != unescape(key):
                         continue
 
-                    if searchpayload and not re.search(searchpayload, msg.value.decode('ascii','backslashreplace'), flags=re.IGNORECASE):
-                        continue
-
                     headers = b''
                     for k,v in msg.headers:
                         k_ = escape(k.encode('utf-8'))
@@ -273,6 +270,14 @@ def recv(cfg, topic, count, matchedcount, follow, jump, writefilepath, key, sear
                             decoded_payload = plugin.plugin_object.decode(msg.value, topic.topic)
                             if decoded_payload:
                                 break
+
+                    if searchpayload:
+                        if decoded_payload:
+                            if not re.search(searchpayload, str(decoded_payload), flags=re.IGNORECASE):
+                                continue
+                        else:
+                            if not re.search(searchpayload, msg.value.decode('ascii','backslashreplace'), flags=re.IGNORECASE):
+                                continue
 
                     dt = datetime.datetime.fromtimestamp(msg.timestamp//1000).replace(microsecond=0).astimezone().isoformat()
                     if not quiet:
