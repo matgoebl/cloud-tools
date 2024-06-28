@@ -21,7 +21,7 @@ RUN echo "deb http://repo.mongodb.org/apt/debian bullseye/mongodb-org/5.0 main" 
     curl -sSL https://www.mongodb.org/static/pgp/server-5.0.asc | apt-key add - && \
     apt update && apt install -y mongodb-org
 
-RUN adduser --uid 1000 --home /app --no-create-home --disabled-password --gecos User --shell /bin/sh user
+RUN addgroup --gid 10001 user && adduser --uid 10001 --gid 10001 --home /app --no-create-home --disabled-password --gecos User --shell /bin/sh user
 COPY --from=builder /app/.venv/ /app/.venv/
 COPY --from=builder /app/kafka_$KAFKA_VERSION/ /app/kafka/
 ADD . /app/

@@ -134,13 +134,15 @@ def send(cfg, topic, key, keyfile, headers, headersfile, payload, payloadfile, r
     """Send messages."""
     if headersfile:
         headers = headersfile.read().rstrip(b'\n')
+        header_splitchars = br'[\n]'
     else:
         headers = headers.encode('utf-8')
+        header_splitchars = br'[;]'
 
     headerlist = None
     if headers:
         headerlist = []
-        for header in re.split(br'[;\n]', headers):
+        for header in re.split(header_splitchars, headers):
             k, v = header.split(b':',1)
             headerlist.append( (unescape_bin_str(k), unescape_bin(v)) )
 
