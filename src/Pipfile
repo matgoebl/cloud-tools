@@ -16,12 +16,10 @@ aws-kinesis-agg = "*"
 aws-glue-schema-registry = "*"
 yapsy = "*"
 offspring = "*"
-ratelimiter = "*"
+throttler = "*"
+kinesis-python = {file = "https://github.com/matgoebl/kinesis-python/archive/refs/heads/master.zip"}
 
 [dev-packages]
 
 [requires]
-python_version = "3.9"
-
-[packages.kinesis-python]
-file = "https://github.com/matgoebl/kinesis-python/archive/refs/heads/master.zip"
+python_version = "3.11"

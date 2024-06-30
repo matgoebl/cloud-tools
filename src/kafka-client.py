@@ -21,7 +21,7 @@ import logging
 import ssl
 import math
 import json
-import ratelimiter
+import throttler
 import codecs
 from yapsy.PluginManager import PluginManager, IPluginLocator
 from yapsy.PluginFileLocator import PluginFileLocator, PluginFileAnalyzerMathingRegex
@@ -122,7 +122,7 @@ def escape(data: bytes) -> str:
 @click.option('-t', '--topic',       help='Topic to send to.', required=True, shell_complete=complete_topics)
 @click.option('-k', '--key',         help='Key to use for sending.', default=b'', show_default=True)
 @click.option('-K', '--keyfile',     help='Read key from file.', type=click.File('rb'))
-@click.option('-h', '--headers',     help='Header to set for every sent message, e.g. abc:123;xyz:987', default=b'')
+@click.option('-h', '--headers',     help='Headers to set for every sent message, separated by ";", e.g. abc:123;xyz:987', default=b'')
 @click.option('-p', '--payload',     help='Payload to send.', default=b'', show_default=True)
 @click.option('-H', '--headersfile', help='Read headers from file.', type=click.File('rb'))
 @click.option('-P', '--payloadfile', help='Read payload from file.', type=click.File('rb'))
@@ -133,18 +133,17 @@ def escape(data: bytes) -> str:
 def send(cfg, topic, key, keyfile, headers, headersfile, payload, payloadfile, rate, multiline, count):
     """Send messages."""
     if headersfile:
-        headers = headersfile.read().rstrip(b'\n')
-        header_splitchars = br'[\n]'
+        headers = headersfile.read().rstrip(b'\n').split(b'\n')
     else:
-        headers = headers.encode('utf-8')
-        header_splitchars = br'[;]'
+        headers = headers.encode('utf-8').split(b';')
 
     headerlist = None
     if headers:
         headerlist = []
-        for header in re.split(header_splitchars, headers):
-            k, v = header.split(b':',1)
-            headerlist.append( (unescape_bin_str(k), unescape_bin(v)) )
+        for header in headers:
+            if len(header) > 0:
+                k, v = header.split(b':',1)
+                headerlist.append( (unescape_bin_str(k), unescape_bin(v)) )
 
     if not keyfile:
         key=unescape(key)
@@ -158,7 +157,7 @@ def send(cfg, topic, key, keyfile, headers, headersfile, payload, payloadfile, r
 
     producer = KafkaProducer(**cfg['producer_args'])
 
-    rate_limiter = ratelimiter.RateLimiter(max_calls=rate, period=1)
+    rate_limiter = throttler.ExecutionTimer(1/rate)
 
     while count > 0:
         with rate_limiter:
