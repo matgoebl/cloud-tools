@@ -3,12 +3,12 @@ export BUILDTAG:=$(shell date +%Y%m%d.%H%M%S)
 export ENV PIPENV_VENV_IN_PROJECT=1
 VENV=.venv
 
-all: image
+all: image push
 
 setup: $(VENV)
 
 $(VENV):
-	python3 -m pip install --user virtualenv pipenv
+	-python3 -m pip install --user virtualenv pipenv
 	pipenv install
 	cd .venv/ && wget --continue https://repo1.maven.org/maven2/org/apache/avro/avro-tools/1.11.1/avro-tools-1.11.1.jar
 	cd .venv/bin/ && wget --continue https://raw.githubusercontent.com/cykerway/complete-alias/1.18.0/complete_alias
@@ -26,6 +26,8 @@ distclean: clean
 
 image: $(VENV)
 	docker build --build-arg BUILDTAG=$(BUILDTAG) -t $(IMAGE) .
+
+push:
 	docker tag $(IMAGE) $(DOCKER_REGISTRY)/$(IMAGE):$(BUILDTAG)
 	docker push $(DOCKER_REGISTRY)/$(IMAGE):$(BUILDTAG)
 
