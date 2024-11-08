@@ -2,6 +2,7 @@ export IMAGE=$(shell cd .. && basename $$PWD)
 export BUILDTAG:=$(shell date +%Y%m%d.%H%M%S)
 export ENV PIPENV_VENV_IN_PROJECT=1
 VENV=.venv
+export PATH:=$(PWD)/$(VENV)/bin:$(HOME)/.local/bin:$(PATH)
 
 all: image push
 
@@ -10,7 +11,7 @@ setup: $(VENV)
 $(VENV):
 	-python3 -m pip install --user virtualenv pipenv
 	pipenv install
-	cd .venv/ && wget --continue https://repo1.maven.org/maven2/org/apache/avro/avro-tools/1.11.1/avro-tools-1.11.1.jar
+	cd .venv/ && wget --continue https://repo1.maven.org/maven2/org/apache/avro/avro-tools/1.11.3/avro-tools-1.11.3.jar
 	cd .venv/bin/ && wget --continue https://raw.githubusercontent.com/cykerway/complete-alias/1.18.0/complete_alias
 
 sh: $(VENV)

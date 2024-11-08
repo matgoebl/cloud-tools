@@ -21,7 +21,7 @@ jobs:
       packages: write
 
     steps:
-      - name: Start Bitname Kafka
+      - name: Start Bitnami Kafka
         uses: CandisIO/kafka-actions@v0.0.1
         with:
           kafka version: 3.2.0
@@ -34,6 +34,9 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+
+      - name: Setup Java
+        run: sudo apt-get install -y openjdk-17-jre
 
       - name: Setup Python Environment
         run: make -C src setup
