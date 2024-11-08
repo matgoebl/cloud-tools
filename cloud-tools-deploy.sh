@@ -71,7 +71,7 @@ while getopts dfpsce:i:o:n:e:a:h opt; do
       ;;
    o)#DIR  Download /data/out/ to directory DIR, after executing the pod shell (default 'out/', if existing)
       OUTDIR="$OPTARG"
-      mkdir -p "$OUTDIR"
+      [ -n "$OUTDIR" ] && mkdir -p "$OUTDIR"
       ;;
    n)#NAMESPACE  Set namespace (default is 'default')
       NAMESPACE="$OPTARG"
