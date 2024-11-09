@@ -1,8 +1,8 @@
 export IMAGE=$(shell cd .. && basename $$PWD)
 export BUILDTAG:=$(shell date +%Y%m%d.%H%M%S)
-export ENV PIPENV_VENV_IN_PROJECT=1
+export PIPENV_VENV_IN_PROJECT=1
 VENV=.venv
-export PATH:=$(PWD)/$(VENV)/bin:$(HOME)/.local/bin:$(PATH)
+export PATH:=$(PWD)/$(VENV)/bin:$(PATH)
 
 all: image push
 
