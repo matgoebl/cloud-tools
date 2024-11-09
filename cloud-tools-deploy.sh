@@ -114,10 +114,26 @@ spec:
         - name: data
           emptyDir:
             sizeLimit: 1Gi
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10002
       containers:
       - image: ${IMAGEURL:-${IMAGEBASEURL:-ghcr.io/matgoebl/cloud-tools}:${IMAGETAG:-latest}}
         ${IMAGETAG:+imagePullPolicy: Always}
         name: $IDENTIFIER
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          runAsGroup: 10001
+          seccompProfile:
+            type: RuntimeDefault
+          capabilities:
+            drop:
+            - ALL
         resources:
           requests:
             cpu: "1m"
@@ -160,7 +176,7 @@ pod=""
 while [ -z "$pod" ]; do
  echo -n .
  sleep 1
- read namespace pod < <( kubectl get pods --all-namespaces --sort-by=.metadata.creationTimestamp | sed -ne 's/^\('"$NAMESPACE"'\)  *\('"$IDENTIFIER-"'[^ ]*\) .*Running.*$/\1 \2/p' | tail -n 1; echo 2>/dev/null )
+ read pod < <( kubectl get pods --namespace $NAMESPACE --sort-by=.metadata.creationTimestamp | sed -ne 's/^\('"$IDENTIFIER-"'[^ ]*\) .*Running.*$/\1/p' | tail -n 1; echo 2>/dev/null )
 done
 echo
 
@@ -176,16 +192,16 @@ fi
 
 if [ -n "$INDIR" ]; then
  echo "Uploading $INDIR ..."
- kubectl --namespace "$namespace" cp "$INDIR" "$pod:/data/"
+ kubectl --namespace "$NAMESPACE" cp "$INDIR" "$pod:/data/"
 fi
 
-echo "Connecting to $namespace:$pod ..."
+echo "Connecting to $NAMESPACE:$pod ..."
 echo
 
 [ "$#" != "0" ] && CMD="-c"
-kubectl --namespace "$namespace" exec -it "$pod" -- /bin/bash ${CMD:-} "$@" || true
+kubectl --namespace "$NAMESPACE" exec -it "$pod" -- /bin/bash ${CMD:-} "$@" || true
 
 if [ -n "$OUTDIR" ]; then
  echo "Downloading $OUTDIR ..."
- kubectl --namespace "$namespace" cp "$pod:/data/out/" "$OUTDIR"
+ kubectl --namespace "$NAMESPACE" cp "$pod:/data/out/" "$OUTDIR"
 fi
