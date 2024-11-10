@@ -2,7 +2,7 @@
 __DOC__=$(cat <<__X__
   cloud-tools-deploy.sh - deploys my Cloud Tools
 
-  Copyright (c) 2022 Matthias Goebl (matthias dot goebl at goebl dot net)
+  Copyright (c) 2022-2024 Matthias Goebl (matthias dot goebl at goebl dot net)
   Published under the Apache License Version 2.0
   For details see https://github.com/matgoebl/cloud-tools/
 __X__
@@ -44,7 +44,8 @@ usage ()
 }
 
 OP="deploy"
-while getopts dfpsce:i:o:n:e:a:h opt; do
+TIMEOUT=180
+while getopts dfpsce:i:o:n:e:a:T:h opt; do
  case "$opt" in
    d)#  Destroy deployment
       OP="destroy"
@@ -79,6 +80,9 @@ while getopts dfpsce:i:o:n:e:a:h opt; do
    a)#ARG  Set CLOUD_TOOLS_ARG (can be used in cloud-settings.sh and on target)
       CLOUD_TOOLS_ARG="$OPTARG"
       ;;
+   T)#ARG  Timeout for finding pod
+      TIMEOUT="$OPTARG"
+      ;;
    h)#  Show help
       usage; exit 0 ;;
    *) usage; exit 1 ;;
@@ -92,7 +96,7 @@ shift $(($OPTIND - 1))
 
 
 if [ "$OP" != "connect" ]; then
- kubectl --namespace $NAMESPACE delete job/$IDENTIFIER || true
+ kubectl --namespace "$NAMESPACE" delete "job/$IDENTIFIER" || true
  [ "$OP" = "destroy" ] && exit 0
 fi
 
@@ -110,6 +114,7 @@ spec:
   template:
     spec:
       restartPolicy: Never
+      terminationGracePeriodSeconds: 3
       volumes:
         - name: data
           emptyDir:
@@ -137,12 +142,12 @@ spec:
         resources:
           requests:
             cpu: "1m"
-            memory: "1Mi"
-            ephemeral-storage: "1Gi"
+            memory: "32Mi"
+            ephemeral-storage: "100Mi"
           limits:
-            cpu: "1000m"
-            memory: "256Mi"
-            ephemeral-storage: "2Gi"
+            cpu: "2"
+            memory: "1Gi"
+            ephemeral-storage: "10Gi"
         lifecycle:
           postStart:
             exec:
@@ -167,26 +172,33 @@ __X__
    sed -e 's/^/          /' < "$SCRIPT"
   )
  fi
-) | kubectl --namespace $NAMESPACE apply -f -
+) | kubectl --namespace "$NAMESPACE" apply -f -
 fi
 
+find_pod () {
+ kubectl get pods --namespace "$1" --sort-by=.metadata.creationTimestamp | sed -ne 's/^\('"$2-"'[^ ]*\) .*Running.*$/\1/p' 2>/dev/null | tail -n 1
+}
 
 echo -n "Waiting for latest pod '$IDENTIFIER-*': "
 pod=""
-while [ -z "$pod" ]; do
- echo -n .
+for ((n = 0 ; n < TIMEOUT ; n++ )); do
  sleep 1
- read pod < <( kubectl get pods --namespace $NAMESPACE --sort-by=.metadata.creationTimestamp | sed -ne 's/^\('"$IDENTIFIER-"'[^ ]*\) .*Running.*$/\1/p' | tail -n 1; echo 2>/dev/null )
+ echo -n .
+ read pod < <( find_pod "$NAMESPACE" "$IDENTIFIER" ) && break
 done
 echo
+if [ -z "$pod" ]; then
+ echo "ERROR: Cannot find pod $IDENTIFIER in namespace $NAMESPACE."
+ exit 1
+fi
 
 if [ "$OP" = "forward" ]; then
- kubectl --namespace $NAMESPACE port-forward --address 127.0.0.1 $pod 1080:1080
+ kubectl --namespace "$NAMESPACE" port-forward --address 127.0.0.1 "$pod" 1080:1080
  exit 0
 fi
 
 if [ "$OP" = "script" ]; then
- kubectl --namespace $NAMESPACE logs -f $pod
+ kubectl --namespace "$NAMESPACE" logs -f "$pod"
  exit 0
 fi
 
