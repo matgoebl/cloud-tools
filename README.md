@@ -1,7 +1,7 @@
 # cloud-tools
 Some of my Cloud Tools, including kafka&kinesis sender/receiver and AVRO encoder/decoder.
 
-(c) 2022 Copyright: Matthias Goebl  (e-mail: matthias dot goebl at goebl dot net)
+(c) 2022-2024 Copyright: Matthias Goebl  (e-mail: matthias dot goebl at goebl dot net)
 
 Published under the Apache License 2.0.
 
