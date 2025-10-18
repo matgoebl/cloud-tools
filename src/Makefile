@@ -11,7 +11,7 @@ setup: $(VENV)
 $(VENV):
 	-python3 -m pip install --user virtualenv pipenv
 	pipenv install
-	cd .venv/ && wget --continue https://repo1.maven.org/maven2/org/apache/avro/avro-tools/1.11.3/avro-tools-1.11.3.jar
+	cd .venv/ && wget --continue https://repo1.maven.org/maven2/org/apache/avro/avro-tools/1.12.1/avro-tools-1.12.1.jar
 	cd .venv/bin/ && wget --continue https://raw.githubusercontent.com/cykerway/complete-alias/1.18.0/complete_alias
 
 sh: $(VENV)
