@@ -7,7 +7,7 @@ ENV PIPENV_VENV_IN_PROJECT=1
 ADD Pipfile.lock Pipfile /app/
 WORKDIR /app
 RUN pipenv sync
-RUN cd .venv/ && wget --continue https://repo1.maven.org/maven2/org/apache/avro/avro-tools/1.11.3/avro-tools-1.11.3.jar
+RUN cd .venv/ && wget --continue https://repo1.maven.org/maven2/org/apache/avro/avro-tools/1.12.1/avro-tools-1.12.1.jar
 RUN cd .venv/bin/ && wget --continue https://raw.githubusercontent.com/cykerway/complete-alias/1.18.0/complete_alias
 RUN curl -O https://archive.apache.org/dist/kafka/3.7.0/kafka_$KAFKA_VERSION.tgz && tar -xzf kafka_$KAFKA_VERSION.tgz
 
